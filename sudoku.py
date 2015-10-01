@@ -10,8 +10,9 @@ class Sudoku(Problem):
 
     L'état initial est supposé valide.
     """
+
     def actions(self, state):
-        print np.where(state == 0)
+        print "non-empty index", np.where(state == 0)
         for i, j in zip(*np.where(state == 0)):
             for k in range(1, 10):
                 new_state = np.array(state)
@@ -32,3 +33,17 @@ class Sudoku(Problem):
     def goal_test(self, state):
         """Vérifie si une grille est complète en supposant que l'état est valide"""
         return None not in state
+
+def load_example(path):
+    """" load file at path and each line to cast to Sudoku instance"""
+
+    file = open(path,'r')
+    example_list = []
+    for line in file:
+        m = np.array([int(c) for c in list(line)[:-1]])
+        m = np.array(m.reshape([9,9]))
+        example_list.append(Sudoku(m))
+
+    return example_list
+
+load_example('examples/100sudoku.txt')
