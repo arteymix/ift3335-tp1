@@ -12,8 +12,14 @@ class Sudoku(Problem):
     """
 
     def actions(self, state):
-        """ retourne un tuple (i,j,k), où i,j sont les index de ligne et de colonne d'une case dans un sudoku et k la valeur à y inscrire"""
+        """
+        Les actions sont déterminées en retournant les possibilitiés qui
+        manquent simultanément dans une ligne, colonne et grille correspondantes
+        à une case.
 
+        La position de la case et la nouvelle valeur possible est retournée sous
+        forme d'un triplet (i, j, k).
+        """
         for i, j in zip(*np.where(state == 0)):
             line = state[i]
             column = state[:,j]
@@ -24,29 +30,31 @@ class Sudoku(Problem):
                 # valide la nouvelle configuration et s'assurant qu'une même
                 # valeur non-nulle n'apparait pas plus d'une fois dans la ligne,
                 # colonne et carré correspondant
-
                 if k not in line and k not in column and k not in square:
                     yield (i,j,k)
 
-
     def _validate(self, state):
-        for i in range(9):
+        """Détermine si une configuration donnée est valide."""
+        for i, j in zip(*np.where(state > 0)):
             line = state[i]
-            for j in range(9):
-                column = state[:,j]
-                square = state[i//3:i//3+3,j//3:j//3+3]
+            column = state[:,j]
+            square = state[i//3:i//3+3,j//3:j//3+3]
 
-                if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
-                        [line[line.nonzero()],
-                        column[column.nonzero()],
-                            square[square.nonzero()]])]):
-                    return False
-
-
+            if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
+                    [line[line.nonzero()],
+                    column[column.nonzero()],
+                        square[square.nonzero()]])]):
+                return False
         return True
 
 
     def result(self, state, action):
+        """
+        Calcule la configuration résultante à appliquer une action sur une
+        configuration.
+
+        Le nouvel état est une copie modifiée de l'état passé en argument.
+        """
         i,j,k = action
         new_state = np.array(state)
         new_state.itemset((i, j), k)
@@ -68,13 +76,19 @@ class Sudoku(Problem):
         s = set(state1[i]).union(set(state1[:,j])).union(set(state1[i//3:i//3+3,j//3:j//3+3].flatten()))
         return 9 - len(s - {0})
 
-    def value(self, state) :
+    def value(self, state):
         """
-
+        The value of a state is determined by the sum of remaining possibilities
+        for each cell in the grid.
         """
-
-
-        pass
+        state = np.array(state) # manipulate a copy
+        possibilities = 0
+        for i, j in zip(*np.where(state == 0)):
+            for k in range(1, 10):
+                if self._validate(state.itemset((i, j), k)):
+                    possibilities += 1
+            state.itemset((i, j), 0)
+        return possibilities
 
 def load_example(path):
     """" load file at path and each line to cast to Sudoku instance"""
@@ -91,7 +105,6 @@ def load_example(path):
 ex = load_example('examples/100sudoku.txt')
 
 import time
-
 
 #Décommenter la ligne pour faire un dept-first-search. Attention, ça prends longtemps.
 
