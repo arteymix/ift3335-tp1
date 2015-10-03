@@ -105,22 +105,6 @@ def load_example(path):
 
     return example_list
 
-ex = load_example('examples/100sudoku.txt')
-
-import time
-
-#Décommenter la ligne pour faire un dept-first-search. Attention, ça prends longtemps.
-
-a = time.clock()
-print(ex[0].initial)
-sol = hill_climbing(ex[0])
-#sol = uniform_cost_search(ex[0])
-#sol = best_first_graph_search(ex[0], ex[0].value)
-sol = depth_first_tree_search(ex[0])
-b = time.clock()
-print(sol)
-print(b-a)
-
 class Sudoku2(Problem):
     """
     Définition du probleme de Sudoku comme un problème de recherche dans
@@ -134,21 +118,27 @@ class Sudoku2(Problem):
 
         for i in range(3):
             for j in range(3):
-                square = initial[3*i:i*3+3,j*3:j*3+3]
+                square = self.initial[3*i:i*3+3,j*3:j*3+3]
                 self.not_initialised[(i,j)] = set()
                 s = set(range(10)) - set(square.flatten())
 
 
-                for x,y in np.where(set.square == 0):
-
-
+                for x,y in zip(*np.where(square == 0)):
+                    print("xy",x,y)
+                    # Cree un dictionnaire de
                     self.not_initialised[(i,j)].add((i*3+x,j*3+y))
 
                     #placer un element de s et retirer de s
-                    #initial.itemset()
-                    pass
+                    o = None
+                    for w in s: #Pas tres elegant
+                        o = w
+                        break
+                    s.remove(o)
+                    self.initial.itemset((i*3+x,j*3+y),o)
 
-#                assert len(s) == 0
+
+
+                assert len(s) == 0
 
 
 
@@ -189,11 +179,11 @@ class Sudoku2(Problem):
 
         Le nouvel état est une copie modifiée de l'état passé en argument.
         """
-        i1,j1, i2, j2 = action
+        x, y = action
         new_state = np.array(state)
-        temp = state[i1,j1]
-        new_state.itemset((i1, j1), state[i2,j2])
-        new_state.itemset((i2, j2), temp)
+        temp = state[x]
+        new_state.itemset(x, state[y])
+        new_state.itemset(y, temp)
         return [[j for j in i] for i in new_state] #Le code de hill-climbing n<accepte pas les np.array
 
     def goal_test(self, state):
@@ -207,21 +197,45 @@ class Sudoku2(Problem):
         state2.  If the path does matter, it will consider c and maybe state1
         and action. The default method costs 1 for every step in the path."""
 
-        # Faire une fonction qui compte le nombre de conflit.
-
         return c + 1
+
+    def _count_conflicts(self,state):
+
+        c = 0
+        for i in range(9):
+            line = state[i]
+
+            for j in range(9):
+                column = state[:,j]
+                square = state[i//3:i//3+3,j//3:j//3+3]
+
+                if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
+                        [line[line.nonzero()],
+                        column[column.nonzero()],
+                            square[square.nonzero()]])]):
+                    c += 1
+        return c
+
 
     def value(self, state):
         """
         The value of a state is determined by the sum of remaining possibilities
         for each cell in the grid.
         """
-        state = np.array(state) # manipulate a copy
-        possibilities = 0
-        for i, j in zip(*np.where(state == 0)):
-            for k in range(1, 10):
-                state.itemset((i, j), k)
-                if self._validate(state):
-                    possibilities += 1
-            state.itemset((i, j), 0)
-        return possibilities
+        return self._count_conflicts(state)
+
+
+ex = load_example('examples/100sudoku.txt')
+
+import time
+#Décommenter la ligne pour faire un dept-first-search. Attention, ça prends longtemps.
+
+a = time.clock()
+print(ex[0].initial)
+sol = hill_climbing(Sudoku2(ex[0].initial))
+#sol = uniform_cost_search(ex[0])
+#sol = best_first_graph_search(ex[0], ex[0].value)
+#sol = depth_first_tree_search(ex[0])
+b = time.clock()
+print(sol)
+print(b-a)
