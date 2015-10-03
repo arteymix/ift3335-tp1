@@ -3,6 +3,7 @@
 from aima.search import *
 import numpy as np
 from itertools import combinations
+from random import choice
 
 class Sudoku(Problem):
     """
@@ -112,34 +113,28 @@ class Sudoku2(Problem):
     """
 
     def __init__(self, initconfig):
-        self.initial = np.array(initconfig)
-
+        initconfig = np.array(initconfig)
         self.not_initialised = {}
 
         for i in range(3):
             for j in range(3):
-                square = self.initial[3*i:i*3+3,j*3:j*3+3]
+                square = initconfig[3*i:i*3+3,j*3:j*3+3]
                 self.not_initialised[(i,j)] = set()
                 s = set(range(10)) - set(square.flatten())
 
-
                 for x,y in zip(*np.where(square == 0)):
-                    print("xy",x,y)
+
                     # Cree un dictionnaire de
                     self.not_initialised[(i,j)].add((i*3+x,j*3+y))
 
                     #placer un element de s et retirer de s
-                    o = None
-                    for w in s: #Pas tres elegant
-                        o = w
-                        break
-                    s.remove(o)
-                    self.initial.itemset((i*3+x,j*3+y),o)
-
-
+                    w = choice(list(s))
+                    s.remove(w)
+                    initconfig.itemset((i*3+x,j*3+y),w)
 
                 assert len(s) == 0
 
+        self.initial = [[j for j in i] for i in initconfig]
 
 
     def actions(self, state):
@@ -151,7 +146,7 @@ class Sudoku2(Problem):
         for i in range(3):
             for j in range(3):
                 for x,y in combinations(self.not_initialised[(i,j)],2):
-                    print(x,y)
+
                     yield x,y
 
 
@@ -159,6 +154,7 @@ class Sudoku2(Problem):
 
     def _validate(self, state):
         """Détermine si une configuration donnée est valide."""
+        state = np.array(state)
         for i, j in zip(*np.where(state > 0)):
             line = state[i]
             column = state[:,j]
@@ -176,13 +172,11 @@ class Sudoku2(Problem):
         """
         Calcule la configuration résultante à appliquer une action sur une
         configuration.
-
-        Le nouvel état est une copie modifiée de l'état passé en argument.
         """
         x, y = action
         new_state = np.array(state)
-        temp = state[x]
-        new_state.itemset(x, state[y])
+        temp = new_state[x]
+        new_state.itemset(x, new_state[y])
         new_state.itemset(y, temp)
         return [[j for j in i] for i in new_state] #Le code de hill-climbing n<accepte pas les np.array
 
@@ -191,20 +185,13 @@ class Sudoku2(Problem):
         return self._validate(state)
 
     def path_cost(self, c, state1, action, state2):
-        """Return the cost of a solution path that arrives at state2 from
-        state1 via action, assuming cost c to get up to state1. If the problem
-        is such that the path doesn't matter, this function will only look at
-        state2.  If the path does matter, it will consider c and maybe state1
-        and action. The default method costs 1 for every step in the path."""
-
         return c + 1
 
-    def _count_conflicts(self,state):
-
+    def _count_conflicts(self, state):
+        state = np.array(state)
         c = 0
         for i in range(9):
             line = state[i]
-
             for j in range(9):
                 column = state[:,j]
                 square = state[i//3:i//3+3,j//3:j//3+3]
@@ -214,7 +201,7 @@ class Sudoku2(Problem):
                         column[column.nonzero()],
                             square[square.nonzero()]])]):
                     c += 1
-        return c
+        return - c
 
 
     def value(self, state):
@@ -230,12 +217,25 @@ ex = load_example('examples/100sudoku.txt')
 import time
 #Décommenter la ligne pour faire un dept-first-search. Attention, ça prends longtemps.
 
-a = time.clock()
-print(ex[0].initial)
-sol = hill_climbing(Sudoku2(ex[0].initial))
+
+#Hill-Climbing
+
+
+for i in ex :
+    a = time.clock()
+    print(i.initial)
+    s = Sudoku2(i.initial)
+    #print(s.initial)
+    print('#conflicts', s._count_conflicts(s.initial))
+    sol = hill_climbing(s)
+    #b = time.clock()
+    print(np.array(sol))
+    print('#conflicts', s._count_conflicts(sol))
+    b = time.clock()
+    print(b-a)
+
+
 #sol = uniform_cost_search(ex[0])
 #sol = best_first_graph_search(ex[0], ex[0].value)
 #sol = depth_first_tree_search(ex[0])
-b = time.clock()
-print(sol)
-print(b-a)
+
