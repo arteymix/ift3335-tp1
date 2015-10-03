@@ -14,13 +14,6 @@ class Sudoku(Problem):
     def actions(self, state):
         """ retourne un tuple (i,j,k), où i,j sont les index de ligne et de colonne d'une case dans un sudoku et k la valeur à y inscrire"""
 
-     #   for i in range(9):
-     #       line = set(state[i])
-     #       for j in range(9) :
-     #           column = set(state[:j])
-
-
-
         for i, j in zip(*np.where(state == 0)):
             line = state[i]
             column = state[:,j]
@@ -32,12 +25,26 @@ class Sudoku(Problem):
                 # valeur non-nulle n'apparait pas plus d'une fois dans la ligne,
                 # colonne et carré correspondant
 
-                if all([max(x) <= 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
-                                                                [line[line.nonzero()],
-                                                                column[column.nonzero()],
-#                                                                square[square.nonzero()].flatten()])]): #
-                                                                square[square.nonzero()]])]):
+                if k not in line and k not in column and k not in square:
                     yield (i,j,k)
+
+
+    def _validate(self, state):
+        for i in range(9):
+            line = state[i]
+            for j in range(9):
+                column = state[:,j]
+                square = state[i//3:i//3+3,j//3:j//3+3]
+
+                if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
+                        [line[line.nonzero()],
+                        column[column.nonzero()],
+                            square[square.nonzero()]])]):
+                    return False
+
+
+        return True
+
 
     def result(self, state, action):
         i,j,k = action
@@ -55,12 +62,18 @@ class Sudoku(Problem):
         is such that the path doesn't matter, this function will only look at
         state2.  If the path does matter, it will consider c and maybe state1
         and action. The default method costs 1 for every step in the path."""
-        return c + 1
+
+        i,j,k = action
+
+        s = set(state1[i]).union(set(state1[:,j])).union(set(state1[i//3:i//3+3,j//3:j//3+3].flatten()))
+        return 9 - len(s - {0})
 
     def value(self, state) :
         """
 
         """
+
+
         pass
 
 def load_example(path):
