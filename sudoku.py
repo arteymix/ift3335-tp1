@@ -2,6 +2,7 @@
 
 from aima.search import *
 import numpy as np
+from itertools import combinations
 
 class Sudoku(Problem):
     """
@@ -23,9 +24,9 @@ class Sudoku(Problem):
         for i, j in zip(*np.where(state == 0)):
             line = state[i]
             column = state[:,j]
-            print("ij",i,j)
+     #       print("ij",i,j)
             square = state[i//3:i//3+3,j//3:j//3+3]
-            print("s",square)
+  #          print("s",square)
             for k in range(1, 10):
                 # valide la nouvelle configuration et s'assurant qu'une même
                 # valeur non-nulle n'apparait pas plus d'une fois dans la ligne,
@@ -58,7 +59,7 @@ class Sudoku(Problem):
         i,j,k = action
         new_state = np.array(state)
         new_state.itemset((i, j), k)
-        return new_state
+        return [[j for j in i] for i in new_state] #Le code de hill-climbing n<accepte pas les np.array
 
     def goal_test(self, state):
         """Vérifie si une grille est complète en supposant que l'état est valide"""
@@ -74,7 +75,7 @@ class Sudoku(Problem):
         i,j,k = action
 
         s = set(state1[i]).union(set(state1[:,j])).union(set(state1[i//3:i//3+3,j//3:j//3+3].flatten()))
-        return 9 - len(s - {0})
+        return c + 9 - len(s - {0})
 
     def value(self, state):
         """
@@ -85,7 +86,8 @@ class Sudoku(Problem):
         possibilities = 0
         for i, j in zip(*np.where(state == 0)):
             for k in range(1, 10):
-                if self._validate(state.itemset((i, j), k)):
+                state.itemset((i, j), k)
+                if self._validate(state):
                     possibilities += 1
             state.itemset((i, j), 0)
         return possibilities
@@ -98,6 +100,7 @@ def load_example(path):
     for line in file:
         m = np.array([int(c) for c in list(line)[:-1]])
         m = np.array(m.reshape([9,9]))
+      #  m = [[j for j in i] for i in m]
         example_list.append(Sudoku(m))
 
     return example_list
@@ -110,7 +113,115 @@ import time
 
 a = time.clock()
 print(ex[0].initial)
-#sol = depth_first_tree_search(ex[0])
+sol = hill_climbing(ex[0])
+#sol = uniform_cost_search(ex[0])
+#sol = best_first_graph_search(ex[0], ex[0].value)
+sol = depth_first_tree_search(ex[0])
 b = time.clock()
-#print(sol)
+print(sol)
 print(b-a)
+
+class Sudoku2(Problem):
+    """
+    Définition du probleme de Sudoku comme un problème de recherche dans
+    l'espace d'états.
+    """
+
+    def __init__(self, initconfig):
+        self.initial = np.array(initconfig)
+
+        self.not_initialised = {}
+
+        for i in range(3):
+            for j in range(3):
+                square = initial[3*i:i*3+3,j*3:j*3+3]
+                self.not_initialised[(i,j)] = set()
+                s = set(range(10)) - set(square.flatten())
+
+
+                for x,y in np.where(set.square == 0):
+
+
+                    self.not_initialised[(i,j)].add((i*3+x,j*3+y))
+
+                    #placer un element de s et retirer de s
+                    #initial.itemset()
+                    pass
+
+#                assert len(s) == 0
+
+
+
+    def actions(self, state):
+        """
+        Enumere toute les permutation possb
+        En excluant tous les indices
+        returns i1, j1, i2,j2
+        """
+        for i in range(3):
+            for j in range(3):
+                for x,y in combinations(self.not_initialised[(i,j)],2):
+                    print(x,y)
+                    yield x,y
+
+
+
+
+    def _validate(self, state):
+        """Détermine si une configuration donnée est valide."""
+        for i, j in zip(*np.where(state > 0)):
+            line = state[i]
+            column = state[:,j]
+            square = state[i//3:i//3+3,j//3:j//3+3]
+
+            if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
+                    [line[line.nonzero()],
+                    column[column.nonzero()],
+                        square[square.nonzero()]])]):
+                return False
+        return True
+
+
+    def result(self, state, action):
+        """
+        Calcule la configuration résultante à appliquer une action sur une
+        configuration.
+
+        Le nouvel état est une copie modifiée de l'état passé en argument.
+        """
+        i1,j1, i2, j2 = action
+        new_state = np.array(state)
+        temp = state[i1,j1]
+        new_state.itemset((i1, j1), state[i2,j2])
+        new_state.itemset((i2, j2), temp)
+        return [[j for j in i] for i in new_state] #Le code de hill-climbing n<accepte pas les np.array
+
+    def goal_test(self, state):
+        """Vérifie si une grille est complète en supposant que l'état est valide"""
+        return self._validate(state)
+
+    def path_cost(self, c, state1, action, state2):
+        """Return the cost of a solution path that arrives at state2 from
+        state1 via action, assuming cost c to get up to state1. If the problem
+        is such that the path doesn't matter, this function will only look at
+        state2.  If the path does matter, it will consider c and maybe state1
+        and action. The default method costs 1 for every step in the path."""
+
+        # Faire une fonction qui compte le nombre de conflit.
+
+        return c + 1
+
+    def value(self, state):
+        """
+        The value of a state is determined by the sum of remaining possibilities
+        for each cell in the grid.
+        """
+        state = np.array(state) # manipulate a copy
+        possibilities = 0
+        for i, j in zip(*np.where(state == 0)):
+            for k in range(1, 10):
+                state.itemset((i, j), k)
+                if self._validate(state):
+                    possibilities += 1
+            state.itemset((i, j), 0)
+        return possibilities
