@@ -151,7 +151,7 @@ def tree_search(problem, frontier):
         frontier.extend(node.expand(problem))
     return None
 
-def graph_search(problem, frontier):
+def graph_search(problem, frontier, bound):
     """Search through the successors of a problem to find a goal.
     The argument frontier should be an empty queue.
     If two paths reach a state, only use the first one. [Fig. 3.7]"""
@@ -162,6 +162,8 @@ def graph_search(problem, frontier):
         if problem.goal_test(node.state):
             return node
         explored.add(node.state)
+        if len(explored) > bound:
+            return None
         frontier.extend(child for child in node.expand(problem)
                         if child.state not in explored
                         and child not in frontier)
@@ -175,9 +177,9 @@ def depth_first_tree_search(problem):
     "Search the deepest nodes in the search tree first."
     return tree_search(problem, Stack())
 
-def depth_first_graph_search(problem):
+def depth_first_graph_search(problem, bound=10000):
     "Search the deepest nodes in the search tree first."
-    return graph_search(problem, Stack())
+    return graph_search(problem, Stack(), bound)
 
 def breadth_first_search(problem):
     "[Fig. 3.11]"
