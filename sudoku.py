@@ -93,19 +93,6 @@ class Sudoku(Problem):
             state.itemset((i, j), 0)
         return possibilities
 
-def load_example(path):
-    """" load file at path and each line to cast to Sudoku instance"""
-
-    file = open(path,'r')
-    example_list = []
-    for line in file:
-        m = np.array([int(c) for c in list(line)[:-1]])
-        m = np.array(m.reshape([9,9]))
-      #  m = [[j for j in i] for i in m]
-        example_list.append(Sudoku(m))
-
-    return example_list
-
 class Sudoku2(Problem):
     """
     Définition du probleme de Sudoku comme un problème de recherche dans
@@ -252,8 +239,13 @@ class Sudoku2(Problem):
         """
         return self._count_conflicts(state)
 
+def load_examples(path):
+    """Yield examples from the lines of a file."""
+    with open(path, 'r') as file:
+        for line in file:
+            yield np.array(map(int, line[:-1]), dtype=np.uint8).reshape((9, 9))
 
-ex = load_example('examples/100sudoku.txt')
+ex = load_examples('examples/100sudoku.txt')
 
 import time
 #Décommenter la ligne pour faire un dept-first-search. Attention, ça prends longtemps.
@@ -264,8 +256,8 @@ import time
 
 for i in ex :
     a = time.clock()
-    print(i.initial)
-    s = Sudoku2(i.initial)
+    print(i)
+    s = Sudoku2(i)
     #print(s.initial)
     print('#conflicts', s._count_conflicts(s.initial))
     sol = hill_climbing(s)
