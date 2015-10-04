@@ -26,7 +26,7 @@ class Sudoku(Problem):
             line = state[i]
             column = state[:,j]
      #       print("ij",i,j)
-            square = state[i//3:i//3+3,j//3:j//3+3]
+            square = state[i//3:3*i//3+3,j//3:j//3+3]
   #          print("s",square)
             for k in range(1, 10):
                 # valide la nouvelle configuration et s'assurant qu'une même
@@ -101,6 +101,7 @@ class Sudoku2(Problem):
 
     def __init__(self, initconfig):
         initconfig = np.array(initconfig)
+        self.initial = [[j for j in i] for i in initconfig]
         self.not_initialised = {}
 
         if False : #Premiere methode d'initialisation. Pas tres bonne.
@@ -121,34 +122,38 @@ class Sudoku2(Problem):
                         initconfig.itemset((i*3+x,j*3+y),w)
 
                     assert len(s) == 0
+            self.initial = [[j for j in i] for i in initconfig]
 
         else : #Heuristique d'initialisation
             for i in range(3):
                 for j in range(3):
                     square = initconfig[3*i:i*3+3,j*3:j*3+3]
-                    missing = set(range(10)) - set(square)
+                    missing = set(range(10)) - set(square.flatten())
                     l = []
-
+                    self.not_initialised[(i,j)] = set()
                     for x,y in zip(*np.where(square == 0)):
 
                         # Cree un dictionnaire qui map l'indice des carres a un ensemble de position non-initialise
                         self.not_initialised[(i,j)].add((i*3+x,j*3+y))
 
-                        l.append((x,y),self._getPossibilities(initconfig,x,y))
-
+                        l.append(((3*i+x,3*j+y),self._getPossibilities(initconfig,3*i+x,3*j+y)))
 
                     while len(l) > 0 :
                         l.sort(lambda x, y : len(x[1]) < len(y[1]))
                         z = l.pop(0)
-                        if len(z[1]>0):
+                        if len(z[1]) >0:
                             w = choice(list(z[1]))
                         else :
-                            w = choice(missing)
+                            w = choice(list(missing))
                         missing.remove(w)
-                        map(lambda x: x[1].remove(w), l)
+                        for x,y in l:
+                            if w in y :
+                                y.remove(w)
+                        self.initial[z[0][0]][z[0][1]] = w
+                     #   print("puttted ",w," in ", z[0])
                     assert len(missing) == 0
 
-        self.initial = [[j for j in i] for i in initconfig]
+   #     self.initial = [[j for j in i] for i in initconfig]
 
 
     def _getPossibilities(self,state,i,j):
@@ -159,11 +164,11 @@ class Sudoku2(Problem):
         if state[i][j] == 0 :
             line = state[i]
             column = state[:,j]
-            square = state[3*i:i*3+3,j*3:j*3+3]
+            square = state[3*(i//3):3*(i//3)+3,3*(j//3):3*(j//3)+3]
             return set(range(10)) - set(square.flatten()) - set(line) - set(column)
 
         else :
-            return state[i][j]
+            return set(state[i][j])
 
     def actions(self, state):
         """
@@ -249,6 +254,7 @@ import time
 
 for i in ex :
     a = time.clock()
+    print(i)
     s = Sudoku2(i)
     print(np.array(s.initial))
     print('# de non-conflits', s.value(s.initial))
