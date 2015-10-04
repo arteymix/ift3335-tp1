@@ -306,12 +306,14 @@ def recursive_best_first_search(problem, h=None):
     result, bestf = RBFS(problem, node, infinity)
     return result
 
-def hill_climbing(problem):
+def hill_climbing(problem, bound=10000):
     """From the initial node, keep choosing the neighbor with highest value,
     stopping when no neighbor is better. [Fig. 4.2]"""
     current = Node(problem.initial)
-    while True:
+    explored = 0
+    while explored < bound:
         neighbors = current.expand(problem)
+        explored += len(neighbors)
         if not neighbors:
             break
         neighbor = argmax_random_tie(neighbors,
