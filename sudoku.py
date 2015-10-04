@@ -177,7 +177,7 @@ class Sudoku2(Problem):
         for i, j in zip(*np.where(state > 0)):
             line = state[i]
             column = state[:,j]
-            square = state[i//3:i//3+3,j//3:j//3+3]
+            square = state[3*(i//3):3*(i//3)+3,3*(j//3):3*(j//3)+3]
 
             if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
                     [line[line.nonzero()],
