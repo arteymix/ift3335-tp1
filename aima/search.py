@@ -177,7 +177,7 @@ def depth_first_tree_search(problem):
     "Search the deepest nodes in the search tree first."
     return tree_search(problem, Stack())
 
-def depth_first_graph_search(problem, bound=10000):
+def depth_first_graph_search(problem, bound):
     "Search the deepest nodes in the search tree first."
     return graph_search(problem, Stack(), bound)
 
@@ -199,7 +199,7 @@ def breadth_first_search(problem):
                 frontier.append(child)
     return None
 
-def best_first_graph_search(problem, f):
+def best_first_graph_search(problem, f, bound):
     """Search the nodes with the lowest f scores first.
     You specify the function f(node) that you want to minimize; for example,
     if f is a heuristic estimate to the goal, then we have greedy best
@@ -214,6 +214,8 @@ def best_first_graph_search(problem, f):
     frontier = PriorityQueue(min, f)
     frontier.append(node)
     explored = set()
+    if len(explored) > bound:
+        return None
     while frontier:
         node = frontier.pop()
         if problem.goal_test(node.state):
@@ -229,9 +231,9 @@ def best_first_graph_search(problem, f):
                     frontier.append(child)
     return None
 
-def uniform_cost_search(problem):
+def uniform_cost_search(problem, bound):
     "[Fig. 3.14]"
-    return best_first_graph_search(problem, lambda node: node.path_cost)
+    return best_first_graph_search(problem, lambda node: node.path_cost, bound)
 
 def depth_limited_search(problem, limit=50):
     "[Fig. 3.17]"
@@ -266,12 +268,12 @@ def iterative_deepening_search(problem):
 greedy_best_first_graph_search = best_first_graph_search
     # Greedy best-first search is accomplished by specifying f(n) = h(n).
 
-def astar_search(problem, h=None):
+def astar_search(problem, h=None, bound):
     """A* search is best-first graph search with f(n) = g(n)+h(n).
     You need to specify the h function when you call astar_search, or
     else in your Problem subclass."""
     h = memoize(h or problem.h, 'h')
-    return best_first_graph_search(problem, lambda n: n.path_cost + h(n))
+    return best_first_graph_search(problem, lambda n: n.path_cost + h(n), bound)
 
 #______________________________________________________________________________
 # Other search algorithms
@@ -306,15 +308,15 @@ def recursive_best_first_search(problem, h=None):
     result, bestf = RBFS(problem, node, infinity)
     return result
 
-def hill_climbing(problem, bound=10000):
+def hill_climbing(problem, bound):
     """From the initial node, keep choosing the neighbor with highest value,
     stopping when no neighbor is better. [Fig. 4.2]"""
     current = Node(problem.initial)
     explored = 0
-    while explored < bound:
+    while True:
         neighbors = current.expand(problem)
         explored += len(neighbors)
-        if not neighbors:
+        if not neighbors or explored > bound:
             break
         neighbor = argmax_random_tie(neighbors,
                                      lambda node: problem.value(node.state))
