@@ -116,26 +116,67 @@ class Sudoku2(Problem):
         initconfig = np.array(initconfig)
         self.not_initialised = {}
 
-        for i in range(3):
-            for j in range(3):
-                square = initconfig[3*i:i*3+3,j*3:j*3+3]
-                self.not_initialised[(i,j)] = set()
-                s = set(range(10)) - set(square.flatten())
+        if False : #Premiere methode d'initialisation. Pas tres bonne.
+            for i in range(3):
+                for j in range(3):
+                    square = initconfig[3*i:i*3+3,j*3:j*3+3]
+                    self.not_initialised[(i,j)] = set()
+                    s = set(range(10)) - set(square.flatten())
 
-                for x,y in zip(*np.where(square == 0)):
+                    for x,y in zip(*np.where(square == 0)):
 
-                    # Cree un dictionnaire de
-                    self.not_initialised[(i,j)].add((i*3+x,j*3+y))
+                        # Cree un dictionnaire qui map l'indice des carres a un ensemble de position non-initialise
+                        self.not_initialised[(i,j)].add((i*3+x,j*3+y))
 
-                    #placer un element de s et retirer de s
-                    w = choice(list(s))
-                    s.remove(w)
-                    initconfig.itemset((i*3+x,j*3+y),w)
+                        #placer un element de s et retirer de s
+                        w = choice(list(s))
+                        s.remove(w)
+                        initconfig.itemset((i*3+x,j*3+y),w)
 
-                assert len(s) == 0
+                    assert len(s) == 0
+
+        else : #Heuristique d'initialisation
+            for i in range(3):
+                for j in range(3):
+                    square = initconfig[3*i:i*3+3,j*3:j*3+3]
+                    missing = set(range(10)) - set(square)
+                    l = []
+
+                    for x,y in zip(*np.where(square == 0)):
+
+                        # Cree un dictionnaire qui map l'indice des carres a un ensemble de position non-initialise
+                        self.not_initialised[(i,j)].add((i*3+x,j*3+y))
+
+                        l.append((x,y),self._getPossibilities(initconfig,x,y))
+
+
+                    while len(l) > 0 :
+                        l.sort(lambda x, y : len(x[1]) < len(y[1]))
+                        z = l.pop(0)
+                        if len(z[1]>0):
+                            w = choice(list(z[1]))
+                        else :
+                            w = choice(missing)
+                        missing.remove(w)
+                        map(lambda x: x[1].remove(w), l)
+                    assert len(missing) == 0
 
         self.initial = [[j for j in i] for i in initconfig]
 
+
+    def _getPossibilities(self,state,i,j):
+        """if state[i][j] == 0 return a set containing all possible numbers to be placed there.
+        state must be a numpy array.
+        """
+
+        if state[i][j] == 0 :
+            line = state[i]
+            column = state[:,j]
+            square = state[3*i:i*3+3,j*3:j*3+3]
+            return set(range(10)) - set(square.flatten()) - set(line) - set(column)
+
+        else :
+            return state[i][j]
 
     def actions(self, state):
         """
