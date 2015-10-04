@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 
 from aima.search import *
+from aima.utils import memoize
 import numpy as np
 from itertools import combinations
 from random import choice
+
+def numpify_state(state):
+    return np.array(state, dtype=np.uint8).reshape((9,9))
 
 class Sudoku(Problem):
     """
     Définition du probleme de Sudoku comme un problème de recherche dans
     l'espace d'états.
 
-    L'état initial est supposé valide.
+    L'état, représenté par un tuple de 81 entiers, est supposé valide.
     """
 
     def actions(self, state):
@@ -22,7 +26,7 @@ class Sudoku(Problem):
         La position de la case et la nouvelle valeur possible est retournée sous
         forme d'un triplet (i, j, k).
         """
-        state = np.array(state, dtype=np.uint8).reshape((9,9))
+        state = numpify_state(state)
         for i, j in zip(*np.where(state == 0)):
             line = state[i]
             column = state[:,j]
@@ -69,7 +73,7 @@ class Sudoku(Problem):
         The value of a state is determined by the sum of remaining possibilities
         for each cell in the grid.
         """
-        state = np.array(state) # manipulate a copy
+        state = numpify_state(state)
         possibilities = 0
         for i, j in zip(*np.where(state == 0)):
             for k in range(1, 10):
@@ -173,7 +177,7 @@ class Sudoku2(Problem):
 
     def _validate(self, state):
         """Détermine si une configuration donnée est valide."""
-        state = np.array(state)
+        state = numpify_state(state)
         for i, j in zip(*np.where(state > 0)):
             line = state[i]
             column = state[:,j]
@@ -193,7 +197,7 @@ class Sudoku2(Problem):
         configuration.
         """
         x, y = action
-        new_state = np.array(state)
+        new_state = numpify_state(state)
         temp = new_state[x]
         new_state.itemset(x, new_state[y])
         new_state.itemset(y, temp)
@@ -212,7 +216,7 @@ class Sudoku2(Problem):
         non-conflictuelles, considérant qu'il n'y a pas de conflits sur les
         carrés.
         """
-        state = np.array(state)
+        state = numpify_state(state)
         conflicts = 0
         for i in range(9):
             for j in range(9):
