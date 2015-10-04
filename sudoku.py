@@ -215,29 +215,22 @@ class Sudoku2(Problem):
     def path_cost(self, c, state1, action, state2):
         return c + 1
 
-    def _count_conflicts(self, state):
-        state = np.array(state)
-        c = 0
-        for i in range(9):
-            line = state[i]
-            for j in range(9):
-                column = state[:,j]
-                square = state[i//3:i//3+3,j//3:j//3+3]
-
-                if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
-                        [line[line.nonzero()],
-                        column[column.nonzero()],
-                            square[square.nonzero()]])]):
-                    c += 1
-        return - c
-
-
     def value(self, state):
         """
-        The value of a state is determined by the sum of remaining possibilities
-        for each cell in the grid.
+        La valeur d'un état est déterminé par le nombre de cases
+        non-conflictuelles, considérant qu'il n'y a pas de conflits sur les
+        carrés.
         """
-        return self._count_conflicts(state)
+        state = np.array(state)
+        conflicts = 0
+        for i in range(9):
+            for j in range(9):
+                value = state[i][j]
+                line = state[i]
+                column = state[:,j]
+                conflicts += line[line == value].size + column[column == value].size - 2
+        # on cherche à minimiser les conflits (au plus 81 * 4 = 324)
+        return 324 - conflicts
 
 def load_examples(path):
     """Yield examples from the lines of a file."""
@@ -256,14 +249,13 @@ import time
 
 for i in ex :
     a = time.clock()
-    print(i)
     s = Sudoku2(i)
-    #print(s.initial)
-    print('#conflicts', s._count_conflicts(s.initial))
+    print(np.array(s.initial))
+    print('# de non-conflits', s.value(s.initial))
     sol = hill_climbing(s)
     #b = time.clock()
     print(np.array(sol))
-    print('#conflicts', s._count_conflicts(sol))
+    print('# de non-conflits', s.value(s.initial))
     b = time.clock()
     print(b-a)
 
