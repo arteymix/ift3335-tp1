@@ -160,14 +160,14 @@ def graph_search(problem, frontier, bound):
     while frontier:
         node = frontier.pop()
         if problem.goal_test(node.state):
-            return node
+            return node, len(explored)
         explored.add(node.state)
         if len(explored) > bound:
-            return None
+            return None, len(explored)
         frontier.extend(child for child in node.expand(problem)
                         if child.state not in explored
                         and child not in frontier)
-    return None
+    return None, len(explored)
 
 def breadth_first_tree_search(problem):
     "Search the shallowest nodes in the search tree first."
@@ -215,11 +215,11 @@ def best_first_graph_search(problem, f, bound):
     frontier.append(node)
     explored = set()
     if len(explored) > bound:
-        return None
+        return None, len(explored)
     while frontier:
         node = frontier.pop()
         if problem.goal_test(node.state):
-            return node
+            return node, len(explored)
         explored.add(node.state)
         for child in node.expand(problem):
             if child.state not in explored and child not in frontier:
@@ -229,7 +229,7 @@ def best_first_graph_search(problem, f, bound):
                 if f(child) < f(incumbent):
                     del frontier[incumbent]
                     frontier.append(child)
-    return None
+    return None, len(explored)
 
 def uniform_cost_search(problem, bound):
     "[Fig. 3.14]"
@@ -268,7 +268,7 @@ def iterative_deepening_search(problem):
 greedy_best_first_graph_search = best_first_graph_search
     # Greedy best-first search is accomplished by specifying f(n) = h(n).
 
-def astar_search(problem, h=None, bound):
+def astar_search(problem, bound, h=None):
     """A* search is best-first graph search with f(n) = g(n)+h(n).
     You need to specify the h function when you call astar_search, or
     else in your Problem subclass."""
@@ -323,7 +323,7 @@ def hill_climbing(problem, bound):
         if problem.value(neighbor.state) <= problem.value(current.state):
             break
         current = neighbor
-    return current.state
+    return current.state, explored
 
 def exp_schedule(k=20, lam=0.005, limit=100):
     "One possible schedule function for simulated annealing"
