@@ -26,7 +26,7 @@ class Sudoku(Problem):
         for i, j in zip(*np.where(state == 0)):
             line = state[i]
             column = state[:,j]
-            square = state[i//3*3:i//3*3+3,j//3:j//3*3+3]
+            square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
             for k in range(1, 10):
                 # valide la nouvelle configuration et s'assurant qu'une même
                 # valeur non-nulle n'apparait pas plus d'une fois dans la ligne,
@@ -235,6 +235,7 @@ import time
 #Décommenter la ligne pour faire un dept-first-search. Attention, ça prends longtemps.
 
 # depth first borné à 10000 explorations
+# TODO: améliorer la vitesse d'exécution
 for example in ex:
     print depth_first_graph_search(Sudoku(example), 10000)
 
