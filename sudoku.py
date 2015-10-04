@@ -61,7 +61,7 @@ class Sudoku(Problem):
         state1 = np.array(state1, dtype=np.uint8).reshape((9,9))
         state2 = np.array(state2, dtype=np.uint8).reshape((9,9))
 
-        s = set(state1[i]).union(set(state1[:,j])).union(set(state1[i//3:i//3+3,j//3:j//3+3].flatten()))
+        s = set(state1[i]).union(set(state1[:,j])).union(set(state1[3*(i//3):3*(i//3)+3,3*(j//3):3*(j//3)+3].flatten()))
         return c + 9 - len(s - {0})
 
     def value(self, state):
