@@ -22,33 +22,17 @@ class Sudoku(Problem):
         La position de la case et la nouvelle valeur possible est retournée sous
         forme d'un triplet (i, j, k).
         """
+        state = np.array(state, dtype=np.uint8).reshape((9,9))
         for i, j in zip(*np.where(state == 0)):
             line = state[i]
             column = state[:,j]
-     #       print("ij",i,j)
-            square = state[i//3:3*i//3+3,j//3:j//3+3]
-  #          print("s",square)
+            square = state[i//3*3:i//3*3+3,j//3:j//3*3+3]
             for k in range(1, 10):
                 # valide la nouvelle configuration et s'assurant qu'une même
                 # valeur non-nulle n'apparait pas plus d'une fois dans la ligne,
                 # colonne et carré correspondant
                 if k not in line and k not in column and k not in square:
-                    yield (i,j,k)
-
-    def _validate(self, state):
-        """Détermine si une configuration donnée est valide."""
-        for i, j in zip(*np.where(state > 0)):
-            line = state[i]
-            column = state[:,j]
-            square = state[i//3:i//3+3,j//3:j//3+3]
-
-            if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
-                    [line[line.nonzero()],
-                    column[column.nonzero()],
-                        square[square.nonzero()]])]):
-                return False
-        return True
-
+                    yield i, j, k
 
     def result(self, state, action):
         """
@@ -57,14 +41,14 @@ class Sudoku(Problem):
 
         Le nouvel état est une copie modifiée de l'état passé en argument.
         """
-        i,j,k = action
-        new_state = np.array(state)
-        new_state.itemset((i, j), k)
-        return [[j for j in i] for i in new_state] #Le code de hill-climbing n<accepte pas les np.array
+        i, j, k = action
+        new_state = list(state)
+        new_state[i * 9 + j] = k
+        return tuple(new_state)
 
     def goal_test(self, state):
         """Vérifie si une grille est complète en supposant que l'état est valide"""
-        return 0 not in state
+        return 0 not in np.array(state).flatten()
 
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
@@ -74,6 +58,8 @@ class Sudoku(Problem):
         and action. The default method costs 1 for every step in the path."""
 
         i,j,k = action
+        state1 = np.array(state1, dtype=np.uint8).reshape((9,9))
+        state2 = np.array(state2, dtype=np.uint8).reshape((9,9))
 
         s = set(state1[i]).union(set(state1[:,j])).union(set(state1[i//3:i//3+3,j//3:j//3+3].flatten()))
         return c + 9 - len(s - {0})
@@ -241,13 +227,16 @@ def load_examples(path):
     """Yield examples from the lines of a file."""
     with open(path, 'r') as file:
         for line in file:
-            yield np.array(map(int, line[:-1]), dtype=np.uint8).reshape((9, 9))
+            yield tuple(map(int, line[:-1]))
 
 ex = load_examples('examples/100sudoku.txt')
 
 import time
 #Décommenter la ligne pour faire un dept-first-search. Attention, ça prends longtemps.
 
+# depth first borné à 10000 explorations
+for example in ex:
+    print depth_first_graph_search(Sudoku(example), 10000)
 
 #Hill-Climbing
 
