@@ -214,13 +214,13 @@ def best_first_graph_search(problem, f, bound):
     frontier = PriorityQueue(min, f)
     frontier.append(node)
     explored = set()
-    if len(explored) > bound:
-        return None, len(explored)
     while frontier:
         node = frontier.pop()
         if problem.goal_test(node.state):
             return node, len(explored)
         explored.add(node.state)
+        if len(explored) > bound:
+            return None, len(explored)
         for child in node.expand(problem):
             if child.state not in explored and child not in frontier:
                 frontier.append(child)

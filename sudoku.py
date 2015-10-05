@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from aima.search import *
-from aima.utils import memoize
+from aima.search import Problem, depth_first_graph_search, hill_climbing, greedy_best_first_graph_search
 import numpy as np
-from itertools import combinations
+from itertools import combinations, product
 from random import choice
 
 def numpify_state(state):
+    """Génère une représentation facilement manipulable d'un état Sudoku."""
     return np.array(state, dtype=np.uint8).reshape((9,9))
 
 class Sudoku(Problem):
@@ -17,9 +17,23 @@ class Sudoku(Problem):
     L'état, représenté par un tuple de 81 entiers, est supposé valide.
     """
 
+    def _validate_state(self, state):
+        state = numpify_state(state)
+        for i, j in zip(*np.where(state > 0)):
+            line = state[i]
+            column = state[:,j]
+            square = state[3*(i//3):3*(i//3)+3,3*(j//3):3*(j//3)+3]
+
+            if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
+                    [line[line.nonzero()],
+                    column[column.nonzero()],
+                        square[square.nonzero()]])]):
+                return False
+        return True
+
     def actions(self, state):
         """
-        Les actions sont déterminées en retournant les possibilitiés qui
+        les actions sont déterminées en retournant les possibilitiés qui
         manquent simultanément dans une ligne, colonne et grille correspondantes
         à une case.
 
@@ -52,7 +66,7 @@ class Sudoku(Problem):
 
     def goal_test(self, state):
         """Vérifie si une grille est complète en supposant que l'état est valide"""
-        return 0 not in np.array(state).flatten()
+        return 0 not in state
 
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
@@ -78,134 +92,70 @@ class Sudoku(Problem):
         for i, j in zip(*np.where(state == 0)):
             for k in range(1, 10):
                 state.itemset((i, j), k)
-                if self._validate(state):
+                if self._validate_state(state):
                     possibilities += 1
             state.itemset((i, j), 0)
         return possibilities
 
-class Sudoku2(Problem):
+class FilledSudoku(Sudoku):
     """
-    Définition du probleme de Sudoku comme un problème de recherche dans
-    l'espace d'états.
+    Définition du problème de Sudoku avec initialisation et actions basées sur
+    des permutations.
     """
 
-    def __init__(self, initconfig):
-        initconfig = np.array(initconfig)
-        self.initial = [[j for j in i] for i in initconfig]
-        self.not_initialised = {}
+    def __init__(self, initial):
+        """Remplit la grille avec des valeurs qui respectent les carrés."""
+        state = numpify_state(initial)
 
-        if False : #Premiere methode d'initialisation. Pas tres bonne.
-            for i in range(3):
-                for j in range(3):
-                    square = initconfig[3*i:i*3+3,j*3:j*3+3]
-                    self.not_initialised[(i,j)] = set()
-                    s = set(range(10)) - set(square.flatten())
+        # préserve les positions initiales
+        self.initial_positions = zip(*np.where(state == 0))
 
-                    for x,y in zip(*np.where(square == 0)):
+        # initialise la grille en respect des carrés
+        for i, j in zip(*np.where(state == 0)):
+            square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
+            possibilities = np.setdiff1d(np.arange(1, 10), square.flatten())
+            state.itemset((i, j), possibilities[0])
 
-                        # Cree un dictionnaire qui map l'indice des carres a un ensemble de position non-initialise
-                        self.not_initialised[(i,j)].add((i*3+x,j*3+y))
-
-                        #placer un element de s et retirer de s
-                        w = choice(list(s))
-                        s.remove(w)
-                        initconfig.itemset((i*3+x,j*3+y),w)
-
-                    assert len(s) == 0
-            self.initial = [[j for j in i] for i in initconfig]
-
-        else : #Heuristique d'initialisation
-            for i in range(3):
-                for j in range(3):
-                    square = initconfig[3*i:i*3+3,j*3:j*3+3]
-                    missing = set(range(10)) - set(square.flatten())
-                    l = []
-                    self.not_initialised[(i,j)] = set()
-                    for x,y in zip(*np.where(square == 0)):
-
-                        # Cree un dictionnaire qui map l'indice des carres a un ensemble de position non-initialise
-                        self.not_initialised[(i,j)].add((i*3+x,j*3+y))
-
-                        l.append(((3*i+x,3*j+y),self._getPossibilities(initconfig,3*i+x,3*j+y)))
-
-                    while len(l) > 0 :
-                        l.sort(lambda x, y : len(x[1]) < len(y[1]))
-                        z = l.pop(0)
-                        if len(z[1]) >0:
-                            w = choice(list(z[1]))
-                        else :
-                            w = choice(list(missing))
-                        missing.remove(w)
-                        for x,y in l:
-                            if w in y :
-                                y.remove(w)
-                        self.initial[z[0][0]][z[0][1]] = w
-                     #   print("puttted ",w," in ", z[0])
-                    assert len(missing) == 0
-
-   #     self.initial = [[j for j in i] for i in initconfig]
-
-
-    def _getPossibilities(self,state,i,j):
-        """if state[i][j] == 0 return a set containing all possible numbers to be placed there.
-        state must be a numpy array.
-        """
-
-        if state[i][j] == 0 :
-            line = state[i]
-            column = state[:,j]
-            square = state[3*(i//3):3*(i//3)+3,3*(j//3):3*(j//3)+3]
-            return set(range(10)) - set(square.flatten()) - set(line) - set(column)
-
-        else :
-            return set(state[i][j])
+        self.initial = tuple(state.flatten())
 
     def actions(self, state):
         """
-        Enumere toute les permutation possb
-        En excluant tous les indices
-        returns i1, j1, i2,j2
+        Énumère les permutations dans les carrés pour chaque position mutable.
         """
-        for i in range(3):
-            for j in range(3):
-                for x,y in combinations(self.not_initialised[(i,j)],2):
-
-                    yield x,y
-
-
-
-
-    def _validate(self, state):
-        """Détermine si une configuration donnée est valide."""
         state = numpify_state(state)
-        for i, j in zip(*np.where(state > 0)):
-            line = state[i]
-            column = state[:,j]
-            square = state[3*(i//3):3*(i//3)+3,3*(j//3):3*(j//3)+3]
 
-            if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
-                    [line[line.nonzero()],
-                    column[column.nonzero()],
-                        square[square.nonzero()]])]):
-                return False
-        return True
-
+        # propose des permutations (x, y) carré par carré
+        for i, j in product(range(3), range(3)):
+            mutable_positions = set(product(range(i, i+3), range(j, j+3))) - set(self.initial_positions)
+            for swap in combinations(mutable_positions, 2):
+                yield swap
 
     def result(self, state, action):
-        """
-        Calcule la configuration résultante à appliquer une action sur une
-        configuration.
-        """
+        """Effectue une permutation au sein d'un carré."""
         x, y = action
-        new_state = numpify_state(state)
-        temp = new_state[x]
-        new_state.itemset(x, new_state[y])
-        new_state.itemset(y, temp)
-        return [[j for j in i] for i in new_state] #Le code de hill-climbing n<accepte pas les np.array
+        state, new_state = tuple(map(numpify_state, [state]*2))
+
+        # permutate les deux positions (x, y)
+        new_state.itemset(x, state[y])
+        new_state.itemset(y, state[x])
+
+        return tuple(new_state.flatten())
 
     def goal_test(self, state):
-        """Vérifie si une grille est complète en supposant que l'état est valide"""
-        return self._validate(state)
+        """
+        Détermine si une configuration donnée est valide en supposant les carrés
+        valides.
+
+        Seul les lignes et les colonnes sont vérifiées.
+        """
+        state = numpify_state(state)
+        for line in state:
+            if np.bincount(line).max() > 1:
+                return False
+        for column in state.T:
+            if np.bincount(column).max() > 1:
+                return False
+        return True
 
     def path_cost(self, c, state1, action, state2):
         return c + 1
@@ -233,32 +183,36 @@ def load_examples(path):
         for line in file:
             yield tuple(map(int, line[:-1]))
 
-ex = load_examples('examples/100sudoku.txt')
+examples = load_examples('examples/100sudoku.txt')
 
 import time
-#Décommenter la ligne pour faire un dept-first-search. Attention, ça prends longtemps.
+from contextlib import contextmanager
+
+@contextmanager
+def bench(name):
+    a = time.clock()
+    yield
+    print name, "took", str(time.clock() - a) + "s"
+
 
 # depth first borné à 10000 explorations
 # TODO: améliorer la vitesse d'exécution
-for example in ex:
-    print depth_first_graph_search(Sudoku(example), 10000)
+for example in examples:
+    with bench("depth first"):
+        solution, explored = depth_first_graph_search(Sudoku(example), 10)
 
-#Hill-Climbing
+    with bench("hill climbing"):
+        s = FilledSudoku(example)
+        solution, explored = hill_climbing(s, 10000)
+        print numpify_state(s.initial), numpify_state(solution), s.value(s.initial), s.value(solution), "explored", explored
 
-
-for i in ex :
-    a = time.clock()
-    print(i)
-    s = Sudoku2(i)
-    print(np.array(s.initial))
-    print('# de non-conflits', s.value(s.initial))
-    sol = hill_climbing(s)
-    #b = time.clock()
-    print(np.array(sol))
-    print('# de non-conflits', s.value(s.initial))
-    b = time.clock()
-    print(b-a)
-
+    with bench("greedy best first"):
+        # TODO: optimiser la validation d'état
+        s = Sudoku(example)
+        def h(node):
+            return s.value(node.state)
+        solution, explored = greedy_best_first_graph_search(s, h, 10000)
+        print solution, explored
 
 #sol = uniform_cost_search(ex[0])
 #sol = best_first_graph_search(ex[0], ex[0].value)

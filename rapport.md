@@ -17,5 +17,10 @@ L'état final est une grille contenant aucune valeur nulle.
 Un successeur constitue une grille dont l'une des cases nulle prend une valeur
 entre 1 et 9. Le coût d'étape est le même pour toute les cases.
 
-Il y a donc $9 * n$ successeurs possible pour une grille de $n$ cases nulles.
+Il y a donc une borne supérieure de $9 * n$ successeurs possible pour une
+grille de $n$ cases nulles.
+
+De manière interne, l'état est représenté par un tuple de 81 entiers hachable.
+Il est manipulé à comme une matrice NumPy afin de faciltier les traitements sur
+les carrés à l'aide de `numpify_state`.
 
