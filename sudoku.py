@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from aima.search import Problem, depth_first_graph_search, hill_climbing, greedy_best_first_graph_search
+from aima.search import Problem, depth_first_graph_search, hill_climbing, greedy_best_first_graph_search, astar_search
 import numpy as np
 from itertools import combinations, product
 from random import choice
@@ -18,6 +18,7 @@ class Sudoku(Problem):
     """
 
     def _validate_state(self, state):
+        """Valide complètement l'état d'une grille de Sudoku."""
         state = numpify_state(state)
         for i, j in zip(*np.where(state > 0)):
             line = state[i]
@@ -199,11 +200,12 @@ def bench(name):
 # TODO: améliorer la vitesse d'exécution
 for example in examples:
     with bench("depth first"):
-        solution, explored = depth_first_graph_search(Sudoku(example), 10)
+        solution, explored = depth_first_graph_search(Sudoku(example), bound=10000)
+        print solution, explored
 
     with bench("hill climbing"):
         s = FilledSudoku(example)
-        solution, explored = hill_climbing(s, 10000)
+        solution, explored = hill_climbing(s, bound=10000)
         print numpify_state(s.initial), numpify_state(solution), s.value(s.initial), s.value(solution), "explored", explored
 
     with bench("greedy best first"):
@@ -211,7 +213,14 @@ for example in examples:
         s = Sudoku(example)
         def h(node):
             return s.value(node.state)
-        solution, explored = greedy_best_first_graph_search(s, h, 10000)
+        solution, explored = greedy_best_first_graph_search(s, h, bound=10000)
+        print solution, explored
+
+    with bench('astar'):
+        s = Sudoku(example)
+        def h(node):
+            return s.value(node.state)
+        solution, explored = astar_search(s, bound=10000, h=h)
         print solution, explored
 
 #sol = uniform_cost_search(ex[0])
