@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from aima.search import Problem, depth_first_graph_search, hill_climbing, greedy_best_first_graph_search, astar_search
+from aima.search import Problem, depth_first_graph_search, hill_climbing, greedy_best_first_graph_search, astar_search, simulated_annealing
 import numpy as np
 from itertools import combinations, product
 from random import choice
@@ -118,7 +118,7 @@ class FilledSudoku(Sudoku):
             state.itemset((i, j), possibilities[0])
 
         self.initial = tuple(state.flatten())
-
+        
     def actions(self, state):
         """
         Énumère les permutations dans les carrés pour chaque position mutable.
@@ -130,11 +130,35 @@ class FilledSudoku(Sudoku):
             mutable_positions = set(product(range(i, i+3), range(j, j+3))) - set(self.initial_positions)
             for swap in combinations(mutable_positions, 2):
                 yield swap
+        return
+        
+        #Super-branchement. Génère une enorme quantite de branchement. Mais augmente les chances de trouver un bon resultat.
+        #a tester. Faut modifier la fonction result() si ce morceaux la de code est utilisé
+        mutable_positions = [[None for i in range(3)] for j in range(3)]
+        for i, j in product(range(3), range(3)):
+            mutable_positions[i][j] = set(product(range(i, i+3), range(j, j+3))) - set(self.initial_positions)
+            
+        for i in range(3):                   
+            
+            for s, w, ap in product([combinations(mutable_positions[i][j], 2) for j in range(3)]):
+                yield s,w,ap
+
+            for s, w, ap in product([combinations(mutable_positions[j][i], 2) for j in range(3)]):
+                yield s,w,ap
+
+        for s, w, ap in product([combinations(mutable_positions[j][j], 2) for j in range(3)]):
+            yield s,w,ap
+
+        for s, w, ap in product([combinations(mutable_positions[2-j][j], 2) for j in range(3)]):
+            yield s,w,ap
+
+        
 
     def result(self, state, action):
         """Effectue une permutation au sein d'un carré."""
         x, y = action
         state, new_state = tuple(map(numpify_state, [state]*2))
+
 
         # permutate les deux positions (x, y)
         new_state.itemset(x, state[y])
@@ -142,6 +166,18 @@ class FilledSudoku(Sudoku):
 
         return tuple(new_state.flatten())
 
+        #Si le super-branchement est utilisé, il faut utiliser ca comme fonction poru result() :
+               
+        state, new_state = tuple(map(numpify_state, [state]*2))
+        
+        for x,y in action:
+            new_state.itemset(x, state[y])
+            new_state.itemset(y, state[x])
+
+        return tuple(new_state.flatten())
+        
+        
+        
     def goal_test(self, state):
         """
         Détermine si une configuration donnée est valide en supposant les carrés
@@ -196,9 +232,20 @@ def bench(name):
     print name, "took", str(time.clock() - a) + "s"
 
 
+
 # depth first borné à 10000 explorations
 # TODO: améliorer la vitesse d'exécution
 for example in examples:
+    with bench("simulated annealing"):
+        p = FilledSudoku(example)
+        i = 0 
+        while True :
+            i += 1
+            n = simulated_annealing(p)
+            print n, p.goal_test(n.state), p.value(n.state)
+            if p.goal_test(n.state):
+                print "Valid solution found in "+str(i)+" iteration"
+                
     with bench("depth first"):
         solution, explored = depth_first_graph_search(Sudoku(example), bound=10000)
         print solution, explored
@@ -225,5 +272,5 @@ for example in examples:
 
 #sol = uniform_cost_search(ex[0])
 #sol = best_first_graph_search(ex[0], ex[0].value)
-#sol = depth_first_tree_search(ex[0])
-
+#sol = depth_first_tree_search(ex[0])                
+                
