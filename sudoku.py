@@ -9,6 +9,21 @@ def numpify_state(state):
     """Génère une représentation facilement manipulable d'un état Sudoku."""
     return np.array(state, dtype=np.uint8).reshape((9,9))
 
+def validate_state(self, state):
+    """Valide l'état d'une grille de Sudoku"""
+    state = numpify_state(state)
+    for i, j in zip(*np.where(state > 0)):
+        line = state[i]
+        column = state[:,j]
+        square = state[3*(i//3):3*(i//3)+3,3*(j//3):3*(j//3)+3]
+
+        if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
+                [line[line.nonzero()],
+                column[column.nonzero()],
+                    square[square.nonzero()]])]):
+            return False
+    return True
+
 class Sudoku(Problem):
     """
     Définition du probleme de Sudoku comme un problème de recherche dans
@@ -16,21 +31,6 @@ class Sudoku(Problem):
 
     L'état, représenté par un tuple de 81 entiers, est supposé valide.
     """
-
-    def _validate_state(self, state):
-        """Valide complètement l'état d'une grille de Sudoku."""
-        state = numpify_state(state)
-        for i, j in zip(*np.where(state > 0)):
-            line = state[i]
-            column = state[:,j]
-            square = state[3*(i//3):3*(i//3)+3,3*(j//3):3*(j//3)+3]
-
-            if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
-                    [line[line.nonzero()],
-                    column[column.nonzero()],
-                        square[square.nonzero()]])]):
-                return False
-        return True
 
     def actions(self, state):
         """
@@ -46,7 +46,7 @@ class Sudoku(Problem):
             line = state[i]
             column = state[:,j]
             square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
-            for k in range(1, 10):
+            for k in xrange(1, 10):
                 # valide la nouvelle configuration et s'assurant qu'une même
                 # valeur non-nulle n'apparait pas plus d'une fois dans la ligne,
                 # colonne et carré correspondant
@@ -89,13 +89,12 @@ class Sudoku(Problem):
         for each cell in the grid.
         """
         state = numpify_state(state)
-        possibilities = 0
+        possibilities = 729
         for i, j in zip(*np.where(state == 0)):
-            for k in range(1, 10):
-                state.itemset((i, j), k)
-                if self._validate_state(state):
-                    possibilities += 1
-            state.itemset((i, j), 0)
+            line = state[i]
+            column = state[:,j]
+            square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
+            possibilities -= len(reduce(np.setdiff1d, [np.arange(1, 10), line, column, square.flatten()]))
         return possibilities
 
 class FilledSudoku(Sudoku):
@@ -109,7 +108,7 @@ class FilledSudoku(Sudoku):
         state = numpify_state(initial)
 
         # préserve les positions initiales
-        self.initial_positions = zip(*np.where(state == 0))
+        self.initial_positions = list(zip(*np.where(state == 0)))
 
         # initialise la grille en respect des carrés
         for i, j in zip(*np.where(state == 0)):
@@ -126,8 +125,8 @@ class FilledSudoku(Sudoku):
         state = numpify_state(state)
 
         # propose des permutations (x, y) carré par carré
-        for i, j in product(range(3), range(3)):
-            mutable_positions = set(product(range(i, i+3), range(j, j+3))) - set(self.initial_positions)
+        for i, j in product(xrange(3), xrange(3)):
+            mutable_positions = set(product(range(i*3, i*3+3), range(j*3, j*3+3))) - set(self.initial_positions)
             for swap in combinations(mutable_positions, 2):
                 yield swap
         return
@@ -205,12 +204,13 @@ class FilledSudoku(Sudoku):
         """
         state = numpify_state(state)
         conflicts = 0
-        for i in range(9):
-            for j in range(9):
-                value = state[i][j]
-                line = state[i]
-                column = state[:,j]
-                conflicts += line[line == value].size + column[column == value].size - 2
+        for i in xrange(9):
+            for j in xrange(9):
+                if (i, j) not in self.initial_positions:
+                    value = state[i][j]
+                    line = state[i]
+                    column = state[:,j]
+                    conflicts += line[line == value].size + column[column == value].size - 2
         # on cherche à minimiser les conflits (au plus 81 * 4 = 324)
         return 324 - conflicts
 
@@ -247,17 +247,19 @@ for example in examples:
                 print "Valid solution found in "+str(i)+" iteration"
                 
     with bench("depth first"):
-        solution, explored = depth_first_graph_search(Sudoku(example), bound=10000)
-        print solution, explored
+        #solution, explored = depth_first_graph_search(Sudoku(example), bound=10000)
+        #print solution, explored
+        pass
 
     with bench("hill climbing"):
         s = FilledSudoku(example)
-        solution, explored = hill_climbing(s, bound=10000)
+        solution, explored = hill_climbing(s, bound=100)
         print numpify_state(s.initial), numpify_state(solution), s.value(s.initial), s.value(solution), "explored", explored
 
+    continue
     with bench("greedy best first"):
         # TODO: optimiser la validation d'état
-        s = Sudoku(example)
+        s = FilledSudoku(example)
         def h(node):
             return s.value(node.state)
         solution, explored = greedy_best_first_graph_search(s, h, bound=10000)
@@ -267,7 +269,7 @@ for example in examples:
         s = Sudoku(example)
         def h(node):
             return s.value(node.state)
-        solution, explored = astar_search(s, bound=10000, h=h)
+        solution, explored = astar_search(s, bound=10, h=h)
         print solution, explored
 
 #sol = uniform_cost_search(ex[0])
