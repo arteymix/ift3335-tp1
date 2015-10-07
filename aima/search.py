@@ -159,6 +159,7 @@ def graph_search(problem, frontier, bound):
     explored = set()
     while frontier:
         node = frontier.pop()
+        print(node)
         if problem.goal_test(node.state):
             return node, len(explored)
         explored.add(node.state)

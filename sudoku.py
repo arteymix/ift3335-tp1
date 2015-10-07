@@ -235,6 +235,7 @@ def remaining_possibilities(node):
 import math
 
 def remaining_lines(node):
+    """ heuristic for sudoku """
     state = numpify_state(node.state)
     empty = 0
     for line in state:
@@ -243,6 +244,7 @@ def remaining_lines(node):
     return empty
 
 def remaining_blanks(node):
+    """ heuristic for soduku """
     state = numpify_state(node.state)
     print state, state[state == 0].size
     return state[state == 0].size
@@ -256,6 +258,7 @@ def remaining_blanks(node):
     return blanks
 
 def conflicts(node):
+    """heuristic for FilledSudoku """
     state = numpify_state(node.state)
     conflicts = 0
     for i in xrange(9):
@@ -311,6 +314,10 @@ for example in examples:
 
     with bench("greedy best first"):
         # TODO: optimiser la validation d'état
+        #
+        #   Voici une idée d'heuristique a utiliser avec le greedy best first et la premiere definition
+        #     Si il est possible d'inférer dans l'é
+
         s = FilledSudoku(example)
         def h(node):
             return s.value(node.state)

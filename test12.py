@@ -1,23 +1,36 @@
+# -*- coding: utf-8 -*-
 __author__ = 'ntak'
 
-from sudoku import *
+from aima.search import Problem, depth_first_graph_search, hill_climbing, greedy_best_first_graph_search, astar_search, simulated_annealing
+import numpy as np
+from itertools import combinations, product
+
+def numpify_state(state):
+    """Génère une représentation facilement manipulable d'un état Sudoku."""
+    return np.array(state).reshape((9,9))
+
+def load_examples(path):
+    """Yield examples from the lines of a file."""
+    with open(path, 'r') as file:
+        for line in file:
+            yield tuple(map(int, line[:-1]))
 
 class Sudoku3(Problem):
-   """
+    """
     Définition du probleme de Sudoku comme un problème de recherche dans un espace d'états.
 
     L'état est un tableau 9x9 ou chaque case contient une valeur de 1 à 9 ou un ensemble des possibilités restante pour cette case.
     """
 
     def __init__(self, initial):
-        """Remplit la grille avec des valeurs qui respectent les carrés."""
+        """ Remplit la grille avec des valeurs qui respectent les carrés."""
         initial = numpify_state(initial)
 
         state = np.array([[set([i+1 for i in range(9)]) for x in range(9)] for y in range(9)])
 
         # initialise la grille en respect des carrés
         for i, j in zip(*np.where(initial != 0)):
-            state = _result(state, (i,j,initial[i][j]))
+            state = self._result(state, (i,j,initial[i][j]))
 
         self.initial = self.normalise_state(state)
 
@@ -27,15 +40,14 @@ class Sudoku3(Problem):
 
         while modif :
             modif = False
-            x = np.array(state)
-
-            map(lambda y : 1 if len(y) == 1, x)
+            x = np.array([map(lambda y : 1 if len(y) == 1 else 0, line) for line in state])
+            print(x)
 
             for i in range(9):
                 line = x[i]
                 if sum(line) == 8 :
                     y = np.where(line != 1)
-                    k = set(range(1,10)) - set([state[i][j] if j != y for j in range(9)])
+                    k = set(range(1,10)) - reduce(lambda x,y : x.union(y), [state[i][j] for j in range(9) if j != y])
                     assert len(k) == 1
                     state = _result(state, (i,j,k))
                     modif = True
@@ -45,22 +57,23 @@ class Sudoku3(Problem):
                 column = x[:,j]
                 if sum(column) == 8 :
                     y = np.where(column != 1)
-                    k = set(range(1,10)) - set([state[i][j] if i != y for i in range(9)])
+                    k = set(range(1,10)) - reduce(lambda x,y : x.union(y), [state[i][j] for i in range(9) if i != y])
                     assert len(k) == 1
                     state = _result(state, (i,j,k))
                     modif = True
 
             for i,j in product(range(3),range(3)):
                 square = x[i//3*3:i//3*3+3,j//3*3:j//3*3+3].flatten()
+                s = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3].flatten()
                 if sum(square) == 8 :
                     y = np.where(square != 1)
-                    k = set(range(1,10)) - set([state[i][j] if i != y for i in range(9)])
+                    k = set(range(1,10)) - reduce(lambda x,y : x.union(y), [s[i] for i in range(9) if i != y ])
                     assert len(k) == 1
                     state = _result(state, (i,j,k))
                     modif = True
 
 
-        return tuple(map(lambda x : frozenset(x), state))
+        return tuple(np.array([[frozenset(j) for j in i] for i in state]).flatten())
 
 
 
@@ -73,6 +86,7 @@ class Sudoku3(Problem):
         La position de la case et la nouvelle valeur possible est retournée sous
         forme d'un triplet (i, j, k).
         """
+        state = numpify_state(state)
 
         for i in range(9):
             for j in range(9):
@@ -88,7 +102,7 @@ class Sudoku3(Problem):
         column = state[:,j]
         square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
 
-        map(lambda x: x.remove(k) if k in x, [line, column, square])
+        map(lambda x: x.remove(k) if k in x else None, [line, column, square])
         state[i][j] = {k}
 
         return state
@@ -104,25 +118,14 @@ class Sudoku3(Problem):
         new_state = numpify_state(state)
         map(lambda x:set(x), new_state)
 
-        return tuple([frozenset(i) for i in self.normalise_state(_result(self,new_state,action))])
+        return self.normalise_state(self._result(new_state,action))
 
     def goal_test(self, state):
         """Vérifie si une grille est complète en supposant que l'état est valide"""
-        return []
+        return all(len(i) == 1 for i in state)
 
     def path_cost(self, c, state1, action, state2):
-        """Return the cost of a solution path that arrives at state2 from
-        state1 via action, assuming cost c to get up to state1. If the problem
-        is such that the path doesn't matter, this function will only look at
-        state2.  If the path does matter, it will consider c and maybe state1
-        and action. The default method costs 1 for every step in the path."""
-
-        i,j,k = action
-        state1 = np.array(state1, dtype=np.uint8).reshape((9,9))
-        state2 = np.array(state2, dtype=np.uint8).reshape((9,9))
-
-        s = set(state1[i]).union(set(state1[:,j])).union(set(state1[3*(i//3):3*(i//3)+3,3*(j//3):3*(j//3)+3].flatten()))
-        return c + 9 - len(s - {0})
+        return c + 1
 
     def value(self, state):
         """
@@ -141,3 +144,8 @@ class Sudoku3(Problem):
 
 
 examples = load_examples('examples/100sudoku.txt')
+
+for example in examples:
+    solution, explored = depth_first_graph_search(Sudoku3(example), bound=10000)
+    print solution, explored
+    
