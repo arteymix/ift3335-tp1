@@ -117,7 +117,7 @@ class FilledSudoku(Sudoku):
             state.itemset((i, j), possibilities[0])
 
         self.initial = tuple(state.flatten())
-        
+
     def actions(self, state):
         """
         Énumère les permutations dans les carrés pour chaque position mutable.
@@ -129,14 +129,14 @@ class FilledSudoku(Sudoku):
        #     for swap in combinations(mutable_positions, 2):
         #        yield swap
 #        return
-        
+
         #Super-branchement. Génère une enorme quantite de branchement. Mais augmente les chances de trouver un bon resultat.
         #a tester. Faut modifier la fonction result() si ce morceaux la de code est utilisé
         mutable_positions = [[None for i in range(3)] for j in range(3)]
         for i, j in product(range(3), range(3)):
             mutable_positions[i][j] = set(product(range(3*i, 3*i+3), range(3*j, 3*j+3))) - set(self.initial_positions)
-            
-        for i in range(3):                   
+
+        for i in range(3):
 
             for x, ap in reduce(product,[combinations(mutable_positions[i][j], 2) for j in range(3)]):
 
@@ -158,7 +158,7 @@ class FilledSudoku(Sudoku):
 #        for s, w, ap in product([combinations(mutable_positions[2-j][j], 2) for j in range(3)]):
             yield s,w,ap
 
-        
+
 
     def result(self, state, action):
         """Effectue une permutation au sein d'un carré."""
@@ -173,17 +173,17 @@ class FilledSudoku(Sudoku):
 #        return tuple(new_state.flatten())
 
         #Si le super-branchement est utilisé, il faut utiliser ca comme fonction poru result() :
-               
+
         state, new_state = tuple(map(numpify_state, [state]*2))
-        
+
         for x,y in action:
             new_state.itemset(x, state[y])
             new_state.itemset(y, state[x])
 
         return tuple(new_state.flatten())
-        
-        
-        
+
+
+
     def goal_test(self, state):
         """
         Détermine si une configuration donnée est valide en supposant les carrés
@@ -298,25 +298,23 @@ for example in examples:
 #            print n, p.goal_test(n.state), p.value(n.state)
 #            if p.goal_test(n.state):
 #                print "Valid solution found in "+str(i)+" iteration"
-                
+
     with bench("depth first"):
-        #solution, explored = depth_first_graph_search(Sudoku(example), bound=10000)
-        #print solution, explored
+        solution, explored = depth_first_graph_search(Sudoku(example), bound=10000)
+        print solution, explored
         pass
 
     with bench("hill climbing"):
         s = FilledSudoku(example)
-        solution, explored = hill_climbing(s, bound=100)
-        print numpify_state(s.initial), numpify_state(solution), s.value(s.initial), s.value(solution), "explored", explored
-
-    continue
+        solution = hill_climbing(s)
+        print numpify_state(s.initial), numpify_state(solution), s.value(s.initial), s.value(solution)
 
     with bench("greedy best first"):
         # TODO: optimiser la validation d'état
         s = FilledSudoku(example)
         def h(node):
             return s.value(node.state)
-        solution, explored = greedy_best_first_graph_search(s, h, bound=10000)
+        solution, explored = greedy_best_first_graph_search(s, conflicts, bound=10000)
         print solution, explored
 
     with bench('astar'):
@@ -328,5 +326,5 @@ for example in examples:
 
 #sol = uniform_cost_search(ex[0])
 #sol = best_first_graph_search(ex[0], ex[0].value)
-#sol = depth_first_tree_search(ex[0])                
-                
+#sol = depth_first_tree_search(ex[0])
+

@@ -308,22 +308,21 @@ def recursive_best_first_search(problem, h=None):
     result, bestf = RBFS(problem, node, infinity)
     return result
 
-def hill_climbing(problem, bound):
+def hill_climbing(problem):
     """From the initial node, keep choosing the neighbor with highest value,
     stopping when no neighbor is better. [Fig. 4.2]"""
     current = Node(problem.initial)
     explored = 0
     while True:
         neighbors = current.expand(problem)
-        explored += len(neighbors)
-        if not neighbors or explored > bound:
+        if not neighbors:
             break
         neighbor = argmax_random_tie(neighbors,
                                      lambda node: problem.value(node.state))
         if problem.value(neighbor.state) <= problem.value(current.state):
             break
         current = neighbor
-    return current.state, explored
+    return current.state
 
 def exp_schedule(k=20, lam=0.005, limit=100):
     "One possible schedule function for simulated annealing"
