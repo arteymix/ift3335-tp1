@@ -221,6 +221,51 @@ class FilledSudoku(Sudoku):
         # on cherche à minimiser les conflits (au plus 81 * 4 = 324)
         return 324 - conflicts
 
+def remaining_possibilities(node):
+    state = numpify_state(node.state)
+    possibilities = 0
+    for i, j in zip(*np.where(state == 0)):
+        line = state[i]
+        column = state[:,j]
+        square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
+        possibilities += len(reduce(np.setdiff1d, [np.arange(1, 10), line, column, square.flatten()]))
+    print state, possibilities
+    return possibilities
+
+import math
+
+def remaining_lines(node):
+    state = numpify_state(node.state)
+    empty = 0
+    for line in state:
+        empty += 2**line[line == 0].size
+    print state, empty
+    return empty
+
+def remaining_blanks(node):
+    state = numpify_state(node.state)
+    print state, state[state == 0].size
+    return state[state == 0].size
+    blanks = 3 * 729
+    for i, j in zip(*np.where(state == 0)):
+        line = state[i]
+        column = state[:,j]
+        square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
+        blanks -= line[line == 0].size * column[column == 0].size * square[square == 0].flatten().size
+    print state, blanks
+    return blanks
+
+def conflicts(node):
+    state = numpify_state(node.state)
+    conflicts = 0
+    for i in xrange(9):
+        for j in xrange(9):
+            value = state[i][j]
+            line = state[i]
+            #column = state[:,j]
+            conflicts += line[line == value].size# + column[column == value].size - 2
+    return conflicts
+
 def load_examples(path):
     """Yield examples from the lines of a file."""
     with open(path, 'r') as file:
@@ -234,6 +279,7 @@ from contextlib import contextmanager
 
 @contextmanager
 def bench(name):
+    print "running", name
     a = time.clock()
     yield
     print name, "took", str(time.clock() - a) + "s"
