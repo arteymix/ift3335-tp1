@@ -286,16 +286,20 @@ def bench(name):
     print name, "took", str(time.clock() - a) + "s"
 
 for example in examples:
+    print numpify_state(example)
+
     sudoku = Sudoku(example)
     filled_sudoku = FilledSudoku(example)
 
     with bench("depth first"):
         solution, explored = depth_first_graph_search(sudoku, bound=10000)
-        print solution, explored
+        if solution:
+            print numpify_state(solution), explored
 
     with bench("hill climbing"):
         solution = hill_climbing(filled_sudoku)
-        print numpify_state(filled_sudoku.initial), numpify_state(solution), filled_sudoku.value(s.initial), filled_sudoku.value(solution)
+        if solution:
+            print numpify_state(solution), filled_sudoku.value(filled_sudoku.initial), filled_sudoku.value(solution)
 
 #    with bench("simulated annealing"):
 #        p = FilledSudoku(example)
@@ -309,7 +313,8 @@ for example in examples:
 
     with bench("greedy best first"):
         solution, explored = greedy_best_first_graph_search(sudoku, non_inferable_cells, bound=10000)
-        print numpify_state(solution), explored
+        if solution:
+            print numpify_state(solution), explored
 
     with bench("greedy best first"):
         # TODO: optimiser la validation d'état
@@ -317,5 +322,6 @@ for example in examples:
         #   Voici une idée d'heuristique a utiliser avec le greedy best first et la premiere definition
         #     Si il est possible d'inférer dans l'é
         solution, explored = greedy_best_first_graph_search(filled_sudoku, conflicts, bound=10000)
-        print solution, explored
+        if solution:
+            print numpify_state(solution), explored
 
