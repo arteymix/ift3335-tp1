@@ -69,20 +69,6 @@ class Sudoku(Problem):
         """Vérifie si une grille est complète en supposant que l'état est valide"""
         return 0 not in state
 
-    def path_cost(self, c, state1, action, state2):
-        """Return the cost of a solution path that arrives at state2 from
-        state1 via action, assuming cost c to get up to state1. If the problem
-        is such that the path doesn't matter, this function will only look at
-        state2.  If the path does matter, it will consider c and maybe state1
-        and action. The default method costs 1 for every step in the path."""
-
-        i,j,k = action
-        state1 = np.array(state1, dtype=np.uint8).reshape((9,9))
-        state2 = np.array(state2, dtype=np.uint8).reshape((9,9))
-
-        s = set(state1[i]).union(set(state1[:,j])).union(set(state1[3*(i//3):3*(i//3)+3,3*(j//3):3*(j//3)+3].flatten()))
-        return c + 9 - len(s - {0})
-
     def value(self, state):
         """
         The value of a state is determined by the sum of remaining possibilities
@@ -229,7 +215,6 @@ def remaining_possibilities(node):
         column = state[:,j]
         square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
         possibilities += len(reduce(np.setdiff1d, [np.arange(1, 10), line, column, square.flatten()]))
-    print state, possibilities
     return possibilities
 
 import math
@@ -240,13 +225,11 @@ def remaining_lines(node):
     empty = 0
     for line in state:
         empty += 2**line[line == 0].size
-    print state, empty
     return empty
 
 def remaining_blanks(node):
     """ heuristic for soduku """
     state = numpify_state(node.state)
-    print state, state[state == 0].size
     return state[state == 0].size
     blanks = 3 * 729
     for i, j in zip(*np.where(state == 0)):
@@ -254,7 +237,6 @@ def remaining_blanks(node):
         column = state[:,j]
         square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
         blanks -= line[line == 0].size * column[column == 0].size * square[square == 0].flatten().size
-    print state, blanks
     return blanks
 
 def non_inferable_cells(node):
@@ -271,9 +253,7 @@ def non_inferable_cells(node):
         possibilities = len(reduce(np.setdiff1d, [np.arange(1, 10), line, column, square.flatten()]))
         if possibilities > 1:
             non_inferable += 1
-    print state, non_inferable
     return non_inferable
-
 
 def conflicts(node):
     """heuristic for FilledSudoku """
@@ -305,11 +285,18 @@ def bench(name):
     yield
     print name, "took", str(time.clock() - a) + "s"
 
-
-
-# depth first borné à 10000 explorations
-# TODO: améliorer la vitesse d'exécution
 for example in examples:
+    sudoku = Sudoku(example)
+    filled_sudoku = FilledSudoku(example)
+
+    with bench("depth first"):
+        solution, explored = depth_first_graph_search(sudoku, bound=10000)
+        print solution, explored
+
+    with bench("hill climbing"):
+        solution = hill_climbing(filled_sudoku)
+        print numpify_state(filled_sudoku.initial), numpify_state(solution), filled_sudoku.value(s.initial), filled_sudoku.value(solution)
+
 #    with bench("simulated annealing"):
 #        p = FilledSudoku(example)
 #        i = 0
@@ -320,36 +307,15 @@ for example in examples:
 #            if p.goal_test(n.state):
 #                print "Valid solution found in "+str(i)+" iteration"
 
-    with bench("depth first"):
-        solution, explored = depth_first_graph_search(Sudoku(example), bound=10000)
-        print solution, explored
-        pass
-
-    with bench("hill climbing"):
-        s = FilledSudoku(example)
-        solution = hill_climbing(s)
-        print numpify_state(s.initial), numpify_state(solution), s.value(s.initial), s.value(solution)
+    with bench("greedy best first"):
+        solution, explored = greedy_best_first_graph_search(sudoku, non_inferable_cells, bound=10000)
+        print numpify_state(solution), explored
 
     with bench("greedy best first"):
         # TODO: optimiser la validation d'état
         #
         #   Voici une idée d'heuristique a utiliser avec le greedy best first et la premiere definition
         #     Si il est possible d'inférer dans l'é
-
-        s = FilledSudoku(example)
-        def h(node):
-            return s.value(node.state)
-        solution, explored = greedy_best_first_graph_search(s, conflicts, bound=10000)
+        solution, explored = greedy_best_first_graph_search(filled_sudoku, conflicts, bound=10000)
         print solution, explored
-
-    with bench('astar'):
-        s = Sudoku(example)
-        def h(node):
-            return s.value(node.state)
-        solution, explored = astar_search(s, bound=10, h=h)
-        print solution, explored
-
-#sol = uniform_cost_search(ex[0])
-#sol = best_first_graph_search(ex[0], ex[0].value)
-#sol = depth_first_tree_search(ex[0])
 

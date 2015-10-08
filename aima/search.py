@@ -159,7 +159,6 @@ def graph_search(problem, frontier, bound):
     explored = set()
     while frontier:
         node = frontier.pop()
-        print(node)
         if problem.goal_test(node.state):
             return node, len(explored)
         explored.add(node.state)
@@ -823,7 +822,7 @@ def compare_searchers(problems, header,
 def compare_graph_searchers():
     """Prints a table of results like this:
 >>> compare_graph_searchers()
-Searcher                      Romania(A, B)        Romania(O, N)         Australia          
+Searcher                      Romania(A, B)        Romania(O, N)         Australia
 breadth_first_tree_search     <  21/  22/  59/B>   <1158/1159/3288/N>    <   7/   8/  22/WA>
 breadth_first_search          <   7/  11/  18/B>   <  19/  20/  45/N>    <   2/   6/   8/WA>
 depth_first_graph_search      <   8/   9/  20/B>   <  16/  17/  38/N>    <   4/   5/  11/WA>
@@ -858,9 +857,9 @@ __doc__ += """
 
 >>> board = list('SARTELNID')
 >>> print_boggle(board)
-S  A  R 
-T  E  L 
-N  I  D 
+S  A  R
+T  E  L
+N  I  D
 >>> f = BoggleFinder(board)
 >>> len(f)
 206
