@@ -257,6 +257,24 @@ def remaining_blanks(node):
     print state, blanks
     return blanks
 
+def non_inferable_cells(node):
+    """
+    Compte le nombre de cases qui ne peuvent pas être inférées, soit les cases
+    qui ont plus d'une possibilité.
+    """
+    state = numpify_state(node.state)
+    non_inferable = 0
+    for i, j in zip(*np.where(state == 0)):
+        line = state[i]
+        column = state[:,j]
+        square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
+        possibilities = len(reduce(np.setdiff1d, [np.arange(1, 10), line, column, square.flatten()]))
+        if possibilities > 1:
+            non_inferable += 1
+    print state, non_inferable
+    return non_inferable
+
+
 def conflicts(node):
     """heuristic for FilledSudoku """
     state = numpify_state(node.state)
