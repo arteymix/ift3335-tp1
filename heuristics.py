@@ -4,6 +4,9 @@ import numpy as np
 from utils import numpify_state, count_possibilities
 
 def most_constrained_cell(node):
+    """
+    Compte le nombre de possibilités pour la case qui a subit l'action.
+    """
     if node.parent is None:
         return 0
     i, j, k = node.action

@@ -4,8 +4,9 @@ import sys
 from aima.search import hill_climbing
 from sudoku import FilledSudoku
 
-with open(sys.argv[1], 'r') as f:
-    for line in f:
-        example = tuple(map(int, line[:-1]))
-        s = FilledSudoku(example)
-        print hill_climbing(s)
+from utils import load_examples
+
+for example in load_examples(sys.argv[1]):
+    s = FilledSudoku(example)
+    solution, explored = hill_climbing(s)
+    print ''.join(map(str, solution)), explored
