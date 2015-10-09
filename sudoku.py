@@ -86,6 +86,7 @@ class Sudoku(Problem):
         return possibilities
 
 class RandomizedSudoku(Sudoku):
+    """Définition du problème de Sudoku avec branchement aléatoire."""
     def actions(self, state):
         a = list(Sudoku.actions(self, state))
         shuffle(a)
@@ -298,13 +299,11 @@ class NormalizedSudoku(Problem):
         """
         state = numpify_state(state)
 
-        # remove the
         i, j, k = action
 
         state.itemset((i, j), frozenset([k]))
-        #state[i,j] = frozenset([k])
 
-        # normalize in-place
+        # normalize
         normalized_state = normalize_state(state)
 
         return tuple(normalized_state.flatten())

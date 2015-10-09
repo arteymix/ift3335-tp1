@@ -1,29 +1,21 @@
 # -*- coding: utf-8 -*-
 
-import math
 import numpy as np
 from sudoku import numpify_state
 
-def remaining_possibilities(node):
-    state = numpify_state(node.state)
-    possibilities = 0
-    for i, j in zip(*np.where(state == 0)):
-        line = state[i]
-        column = state[:,j]
-        square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
-        possibilities += len(reduce(np.setdiff1d, [np.arange(1, 10), line, column, square.flatten()]))
-    return possibilities
+def most_constrained_cell(node):
+    if node.parent is None:
+        return 0
+    state = numpify_state(node.parent.state)
+    i, j, k = node.action
 
-def remaining_lines(node):
-    """ heuristic for sudoku """
-    state = numpify_state(node.state)
-    empty = 0
-    for line in state:
-        empty += 2**line[line == 0].size
-    return empty
+    line = state[i]
+    column = state[:,j]
+    square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
+    return len(reduce(np.setdiff1d, [np.arange(1, 10), line, column, square.flatten()]))
 
 def remaining_blanks(node):
-    """ heuristic for soduku """
+    """Heuristique basée sur le nombre de cases vides."""
     state = numpify_state(node.state)
     return state[state == 0].size
     blanks = 3 * 729
@@ -51,7 +43,8 @@ def non_inferable_cells(node):
     return non_inferable
 
 def conflicts(node):
-    """heuristic for FilledSudoku """
+    """Heuristique qui compte le nombre de conflits dans une grille pour un
+    Sudoku remplit aléatoirement."""
     state = numpify_state(node.state)
     conflicts = 0
     for i in xrange(9):
