@@ -5,7 +5,7 @@ from aima.search import Problem, depth_first_graph_search, hill_climbing, greedy
 import numpy as np
 from itertools import combinations, product
 
-from sudoku import numpify_state, load_examples, validate_state
+from sudoku import numpify_state, load_examples, validate_state, bench
 
 vlen = np.vectorize(len)
 vpretty = np.vectorize(lambda x: list(x)[0] if len(x) == 1 else 0)
@@ -19,9 +19,8 @@ def normalize_state(state):
     wrong hypothesis).
     """
     state = np.array(state) # mutate a copy
-    normalized = False
-    while not normalized:
-        normalized = True
+    while True:
+        to_normalize = state[vlen(state) == 1].size # nombre de positions à réduire
         for i, j in zip(*np.where(vlen(state) == 1)):
             line = state[i]
             column = state[:,j]
@@ -32,21 +31,21 @@ def normalize_state(state):
             # reduce line
             for line_j, item in enumerate(line):
                 if value < state[i,line_j]:
-                    state[i,line_j] -= value
-                    normalized = False
+                    state[i,line_j] = item - value
 
             # reduce column
             for column_i, item in enumerate(column):
                 if value < state[column_i,j]:
-                    state[column_i,j] -= value
-                    normalized = False
+                    state[column_i,j] = item - value
 
             # reduce square
             for square_position, item in zip(product(range(0,3), range(0,3)), square.flatten()):
                 x, y = i//3*3+square_position[0], j//3*3 + square_position[1]
                 if value < state[x,y]:
-                    state[x,y] -= value
-                    normalized = False
+                    state[x,y] = item - value
+
+        if state[vlen(state) == 1].size == to_normalize:
+            break # aucune réduction appliquée
 
     return state
 
@@ -59,12 +58,13 @@ class Sudoku3(Problem):
 
     def __init__(self, initial):
         """ Remplit la grille avec des valeurs qui respectent les carrés."""
-        initial = numpify_state(initial)
 
-        state = np.array([frozenset(range(1, 10)) if initial[i,j] == 0 else frozenset([initial[i,j]])
-                           for i, j in product(range(9),range(9))]).reshape((9,9))
+        state = np.array([frozenset(range(1, 10) if k == 0 else [k])
+                          for k in initial]).reshape((9,9))
 
-        self.initial = tuple(normalize_state(state).flatten())
+        state = normalize_state(state)
+
+        self.initial = tuple(state.flatten())
 
     def actions(self, state):
         """
@@ -93,17 +93,11 @@ class Sudoku3(Problem):
         # remove the
         i, j, k = action
 
-        state[i,j] = frozenset([k])
+        state.itemset((i, j), frozenset([k]))
+        #state[i,j] = frozenset([k])
 
         # normalize in-place
         normalized_state = normalize_state(state)
-
-        # the action might be a wrong hypothesis
-        if not validate_state(vpretty(normalized_state)):
-            print 'wrong hypothesis'
-            return self.initial
-
-        print normalized_state
 
         return tuple(normalized_state.flatten())
 
@@ -120,7 +114,7 @@ class Sudoku3(Problem):
         ses cases. 81 est soustrait, car une case sans possibilités contient au
         moins une valeur, soit l'unique possibilité.
         """
-        return sum(map(len, state)) - 81
+        return sum(map(len, state))
 
 examples = load_examples('examples/100sudoku.txt')
 
@@ -129,6 +123,10 @@ for example in examples:
     def h(node):
         return s.value(node.state)
 
-    solution, explored = greedy_best_first_graph_search(s, h, bound=10000)
-    print vpretty(numpify_state(solution.state)), explored
+    with bench('greedy best first graph on {}'.format(''.join(map(str, example)))):
+        solution, explored = greedy_best_first_graph_search(s, lambda node: s.value(node.state), bound=10)
+        if solution:
+            print vpretty(numpify_state(solution.state)), explored
+        else:
+            print 'crap.'
 
