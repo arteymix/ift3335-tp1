@@ -7,24 +7,7 @@ import numpy as np
 from itertools import combinations, product
 from random import choice, shuffle
 
-def numpify_state(state):
-    """Génère une représentation facilement manipulable d'un état Sudoku."""
-    return np.array(state).reshape((9,9))
-
-def validate_state(state):
-    """Valide l'état d'une grille de Sudoku"""
-    state = numpify_state(state)
-    for i, j in zip(*np.where(state > 0)):
-        line = state[i]
-        column = state[:,j]
-        square = state[3*(i//3):3*(i//3)+3,3*(j//3):3*(j//3)+3]
-
-        if any([max(x) > 1 for x in map(lambda x: np.bincount(x) if len(x)>2 else [0],
-                [line[line.nonzero()],
-                column[column.nonzero()],
-                    square[square.nonzero()]])]):
-            return False
-    return True
+from utils import numpify_state, validate_state, count_possibilities
 
 class Sudoku(Problem):
     """
@@ -91,6 +74,11 @@ class RandomizedSudoku(Sudoku):
         a = list(Sudoku.actions(self, state))
         shuffle(a)
         return a
+
+class SortedSudoku(Sudoku):
+    """Définition du problème de Sudoku avec branchement triés."""
+    def actions(self, state):
+        return sorted(Sudoku.actions(self, state), key=lambda x: count_possibilities(state, x[0], x[1]))
 
 class FilledSudoku(Sudoku):
     """

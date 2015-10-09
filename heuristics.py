@@ -1,18 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from sudoku import numpify_state
+from utils import numpify_state, count_possibilities
 
 def most_constrained_cell(node):
     if node.parent is None:
         return 0
-    state = numpify_state(node.parent.state)
     i, j, k = node.action
-
-    line = state[i]
-    column = state[:,j]
-    square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
-    return len(reduce(np.setdiff1d, [np.arange(1, 10), line, column, square.flatten()]))
+    return count_possibilities(node.parent.state, i, j)
 
 def remaining_blanks(node):
     """Heuristique basée sur le nombre de cases vides."""
