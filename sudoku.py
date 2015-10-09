@@ -7,9 +7,9 @@ from random import choice
 
 def numpify_state(state):
     """Génère une représentation facilement manipulable d'un état Sudoku."""
-    return np.array(state, dtype=np.uint8).reshape((9,9))
+    return np.array(state).reshape((9,9))
 
-def validate_state(self, state):
+def validate_state(state):
     """Valide l'état d'une grille de Sudoku"""
     state = numpify_state(state)
     for i, j in zip(*np.where(state > 0)):
@@ -273,8 +273,6 @@ def load_examples(path):
         for line in file:
             yield tuple(map(int, line[:-1]))
 
-examples = load_examples('examples/100sudoku.txt')
-
 import time
 from contextlib import contextmanager
 
@@ -285,43 +283,46 @@ def bench(name):
     yield
     print name, "took", str(time.clock() - a) + "s"
 
-for example in examples:
-    print numpify_state(example)
+if __name__ == '__main__':
+    examples = load_examples('examples/100sudoku.txt')
 
-    sudoku = Sudoku(example)
-    filled_sudoku = FilledSudoku(example)
+    for example in examples:
+        print numpify_state(example)
 
-    with bench("depth first"):
-        solution, explored = depth_first_graph_search(sudoku, bound=10000)
-        if solution:
-            print numpify_state(solution), explored
+        sudoku = Sudoku(example)
+        filled_sudoku = FilledSudoku(example)
 
-    with bench("hill climbing"):
-        solution = hill_climbing(filled_sudoku)
-        if solution:
-            print numpify_state(solution), filled_sudoku.value(filled_sudoku.initial), filled_sudoku.value(solution)
+        with bench("depth first"):
+            solution, explored = depth_first_graph_search(sudoku, bound=10000)
+            if solution:
+                print numpify_state(solution), explored
 
-#    with bench("simulated annealing"):
-#        p = FilledSudoku(example)
-#        i = 0
-#        while True :
-#            i += 1
-#            n = simulated_annealing(p)
-#            print n, p.goal_test(n.state), p.value(n.state)
-#            if p.goal_test(n.state):
-#                print "Valid solution found in "+str(i)+" iteration"
+        with bench("hill climbing"):
+            solution = hill_climbing(filled_sudoku)
+            if solution:
+                print numpify_state(solution), filled_sudoku.value(filled_sudoku.initial), filled_sudoku.value(solution)
 
-    with bench("greedy best first"):
-        solution, explored = greedy_best_first_graph_search(sudoku, non_inferable_cells, bound=10000)
-        if solution:
-            print numpify_state(solution), explored
+    #    with bench("simulated annealing"):
+    #        p = FilledSudoku(example)
+    #        i = 0
+    #        while True :
+    #            i += 1
+    #            n = simulated_annealing(p)
+    #            print n, p.goal_test(n.state), p.value(n.state)
+    #            if p.goal_test(n.state):
+    #                print "Valid solution found in "+str(i)+" iteration"
 
-    with bench("greedy best first"):
-        # TODO: optimiser la validation d'état
-        #
-        #   Voici une idée d'heuristique a utiliser avec le greedy best first et la premiere definition
-        #     Si il est possible d'inférer dans l'é
-        solution, explored = greedy_best_first_graph_search(filled_sudoku, conflicts, bound=10000)
-        if solution:
-            print numpify_state(solution), explored
+        with bench("greedy best first"):
+            solution, explored = greedy_best_first_graph_search(sudoku, non_inferable_cells, bound=10000)
+            if solution:
+                print numpify_state(solution), explored
+
+        with bench("greedy best first"):
+            # TODO: optimiser la validation d'état
+            #
+            #   Voici une idée d'heuristique a utiliser avec le greedy best first et la premiere definition
+            #     Si il est possible d'inférer dans l'é
+            solution, explored = greedy_best_first_graph_search(filled_sudoku, conflicts, bound=10000)
+            if solution:
+                print numpify_state(solution), explored
 

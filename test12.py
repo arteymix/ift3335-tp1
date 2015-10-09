@@ -5,15 +5,50 @@ from aima.search import Problem, depth_first_graph_search, hill_climbing, greedy
 import numpy as np
 from itertools import combinations, product
 
-def numpify_state(state):
-    """Génère une représentation facilement manipulable d'un état Sudoku."""
-    return np.array(state).reshape((9,9))
+from sudoku import numpify_state, load_examples, validate_state
 
-def load_examples(path):
-    """Yield examples from the lines of a file."""
-    with open(path, 'r') as file:
-        for line in file:
-            yield tuple(map(int, line[:-1]))
+vlen = np.vectorize(len)
+vpretty = np.vectorize(lambda x: list(x)[0] if len(x) == 1 else 0)
+
+def normalize_state(state):
+    """
+    Reduce the state in its np.array representation to its minimal
+    expression by applying iteratively all possible logical inference.
+
+    'None' is returned if the normalization leads to an invalid state (due to a
+    wrong hypothesis).
+    """
+    state = np.array(state) # mutate a copy
+    normalized = False
+    while not normalized:
+        normalized = True
+        for i, j in zip(*np.where(vlen(state) == 1)):
+            line = state[i]
+            column = state[:,j]
+            square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
+
+            value = state[i,j]
+
+            # reduce line
+            for line_j, item in enumerate(line):
+                if value < state[i,line_j]:
+                    state[i,line_j] -= value
+                    normalized = False
+
+            # reduce column
+            for column_i, item in enumerate(column):
+                if value < state[column_i,j]:
+                    state[column_i,j] -= value
+                    normalized = False
+
+            # reduce square
+            for square_position, item in zip(product(range(0,3), range(0,3)), square.flatten()):
+                x, y = i//3*3+square_position[0], j//3*3 + square_position[1]
+                if value < state[x,y]:
+                    state[x,y] -= value
+                    normalized = False
+
+    return state
 
 class Sudoku3(Problem):
     """
@@ -26,56 +61,10 @@ class Sudoku3(Problem):
         """ Remplit la grille avec des valeurs qui respectent les carrés."""
         initial = numpify_state(initial)
 
-        state = np.array([[set([i+1 for i in range(9)]) for x in range(9)] for y in range(9)])
+        state = np.array([frozenset(range(1, 10)) if initial[i,j] == 0 else frozenset([initial[i,j]])
+                           for i, j in product(range(9),range(9))]).reshape((9,9))
 
-        # initialise la grille en respect des carrés
-        for i, j in zip(*np.where(initial != 0)):
-            state = self._result(state, (i,j,initial[i][j]))
-
-        self.initial = self.normalise_state(state)
-
-    def normalise_state(self, state):
-        """ State must be a 9x9 numpy array filled with set object"""
-        modif = True
-
-        while modif :
-            modif = False
-            x = np.array([map(lambda y : 1 if len(y) == 1 else 0, line) for line in state])
-            print(x)
-
-            for i in range(9):
-                line = x[i]
-                if sum(line) == 8 :
-                    y = np.where(line != 1)
-                    k = set(range(1,10)) - reduce(lambda x,y : x.union(y), [state[i][j] for j in range(9) if j != y])
-                    assert len(k) == 1
-                    state = _result(state, (i,j,k))
-                    modif = True
-
-
-            for j in range(9):
-                column = x[:,j]
-                if sum(column) == 8 :
-                    y = np.where(column != 1)
-                    k = set(range(1,10)) - reduce(lambda x,y : x.union(y), [state[i][j] for i in range(9) if i != y])
-                    assert len(k) == 1
-                    state = _result(state, (i,j,k))
-                    modif = True
-
-            for i,j in product(range(3),range(3)):
-                square = x[i//3*3:i//3*3+3,j//3*3:j//3*3+3].flatten()
-                s = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3].flatten()
-                if sum(square) == 8 :
-                    y = np.where(square != 1)
-                    k = set(range(1,10)) - reduce(lambda x,y : x.union(y), [s[i] for i in range(9) if i != y ])
-                    assert len(k) == 1
-                    state = _result(state, (i,j,k))
-                    modif = True
-
-
-        return tuple(np.array([[frozenset(j) for j in i] for i in state]).flatten())
-
-
+        self.initial = tuple(normalize_state(state).flatten())
 
     def actions(self, state):
         """
@@ -88,25 +77,9 @@ class Sudoku3(Problem):
         """
         state = numpify_state(state)
 
-        for i in range(9):
-            for j in range(9):
-                if len(state[i][j]) > 1 :
-                    for x in state[i][j]:
-                        yield i,j,x
-
-    def _result(self, state,action):
-        """ Takes a numpy reprensentation of state with mutable set. make in-place modification"""
-        i, j, k = action
-
-        line = state[i]
-        column = state[:,j]
-        square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
-
-        map(lambda x: x.remove(k) if k in x else None, [line, column, square])
-        state[i][j] = {k}
-
-        return state
-
+        for i, j in zip(*np.where(vlen(state) > 1)):
+            for k in state[i, j]:
+                yield i, j, k
 
     def result(self, state, action):
         """
@@ -115,37 +88,47 @@ class Sudoku3(Problem):
 
         Le nouvel état est une copie modifiée de l'état passé en argument.
         """
-        new_state = numpify_state(state)
-        map(lambda x:set(x), new_state)
+        state = numpify_state(state)
 
-        return self.normalise_state(self._result(new_state,action))
+        # remove the
+        i, j, k = action
+
+        state[i,j] = frozenset([k])
+
+        # normalize in-place
+        normalized_state = normalize_state(state)
+
+        # the action might be a wrong hypothesis
+        if not validate_state(vpretty(normalized_state)):
+            print 'wrong hypothesis'
+            return self.initial
+
+        print normalized_state
+
+        return tuple(normalized_state.flatten())
 
     def goal_test(self, state):
-        """Vérifie si une grille est complète en supposant que l'état est valide"""
-        return all(len(i) == 1 for i in state)
-
-    def path_cost(self, c, state1, action, state2):
-        return c + 1
+        """
+        Vérifie si tous les ensembles de la grilles sont composés d'un seul
+        élément.
+        """
+        return all(map(lambda x: len(x) == 1, state))
 
     def value(self, state):
         """
-        The value of a state is determined by the sum of remaining possibilities
-        for each cell in the grid.
+        La valeur d'une grille est déterminée par la somme des possibilités de
+        ses cases. 81 est soustrait, car une case sans possibilités contient au
+        moins une valeur, soit l'unique possibilité.
         """
-        state = numpify_state(state)
-        possibilities = 729
-        for i, j in zip(*np.where(state == 0)):
-            line = state[i]
-            column = state[:,j]
-            square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
-            possibilities -= len(reduce(np.setdiff1d, [np.arange(1, 10), line, column, square.flatten()]))
-        return possibilities
-
-
+        return sum(map(len, state)) - 81
 
 examples = load_examples('examples/100sudoku.txt')
 
 for example in examples:
-    solution, explored = depth_first_graph_search(Sudoku3(example), bound=10000)
-    print solution, explored
-    
+    s = Sudoku3(example)
+    def h(node):
+        return s.value(node.state)
+
+    solution, explored = greedy_best_first_graph_search(s, h, bound=10000)
+    print vpretty(numpify_state(solution.state)), explored
+
