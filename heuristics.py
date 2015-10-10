@@ -3,6 +3,17 @@
 import numpy as np
 from utils import numpify_state, count_possibilities
 
+def possibilities(node):
+    """Compte le nombre de choix possible."""
+    state = numpify_state(node.state)
+    possibilities = 0
+    for i, j in zip(*np.where(state == 0)):
+        line = state[i]
+        column = state[:,j]
+        square = state[i//3*3:i//3*3+3,j//3*3:j//3*3+3]
+        possibilities += len(reduce(np.setdiff1d, [np.arange(1, 10), line, column, square.flatten()]))
+    return possibilities
+
 def most_constrained_cell(node):
     """
     Compte le nombre de possibilités pour la case qui a subit l'action.
