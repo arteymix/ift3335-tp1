@@ -90,7 +90,7 @@ class FilledSudoku(Sudoku):
     des permutations.
     """
 
-    def __init__(self, initial):
+    def __init__(self, initial, super_branch = True):
         """Remplit la grille avec des valeurs qui respectent les carrés."""
         state = numpify_state(initial)
 
@@ -104,48 +104,44 @@ class FilledSudoku(Sudoku):
             state.itemset((i, j), possibilities[0])
 
         self.initial = tuple(state.flatten())
+        self.super_branch = super_branch
 
     def actions(self, state):
         """
         Énumère les permutations dans les carrés pour chaque position mutable.
         """
-
+        if not self.super_branch:    
         # propose des permutations (x, y) carré par carré
-     #   for i, j in product(xrange(3), xrange(3)):
-      #      mutable_positions = set(product(range(i*3, i*3+3), range(j*3, j*3+3))) - set(self.initial_positions)
-       #     for swap in combinations(mutable_positions, 2):
-        #        yield swap
-#        return
+           for i, j in product(xrange(3), xrange(3)):
+            mutable_positions = set(product(range(i*3, i*3+3), range(j*3, j*3+3))) - set(self.initial_positions)
+            for swap in combinations(mutable_positions, 2):
+                yield swap
+        else :
 
         #Super-branchement. Génère une enorme quantite de branchement. Mais augmente les chances de trouver un bon resultat.
         #a tester. Faut modifier la fonction result() si ce morceaux la de code est utilisé
-        mutable_positions = [[None for i in range(3)] for j in range(3)]
-        for i, j in product(range(3), range(3)):
-            mutable_positions[i][j] = set(product(range(3*i, 3*i+3), range(3*j, 3*j+3))) - set(self.initial_positions)
-            for swap in combinations(mutable_positions[i][j], 2):
-                    yield [swap]
-                    
-        for i in range(3):
+            mutable_positions = [[None for i in range(3)] for j in range(3)]
+            for i, j in product(range(3), range(3)):
+                mutable_positions[i][j] = set(product(range(3*i, 3*i+3), range(3*j, 3*j+3))) - set(self.initial_positions)
+                for swap in combinations(mutable_positions[i][j], 2):
+                        yield [swap]
+                        
+            for i in range(3):
 
-            for x, ap in reduce(product,[combinations(mutable_positions[i][j], 2) for j in range(3)]):
+                for x, ap in reduce(product,[combinations(mutable_positions[i][j], 2) for j in range(3)]):
+                    s, w = x
+                    yield s,w,ap
+                for x, ap in reduce(product,[combinations(mutable_positions[j][i], 2) for j in range(3)]):
+                    s,w = x
+                    yield s,w,ap
 
-            #for x, ap in product([combinations(mutable_positions[i][j], 2) for j in range(3)]):
-                s, w = x
-                yield s,w,ap
-            for x, ap in reduce(product,[combinations(mutable_positions[j][i], 2) for j in range(3)]):
+            for x, ap in reduce(product,[combinations(mutable_positions[j][j], 2) for j in range(3)]):
                 s,w = x
-#            for s, w, ap in product([combinations(mutable_positions[j][i], 2) for j in range(3)]):
                 yield s,w,ap
 
-        for x, ap in reduce(product,[combinations(mutable_positions[j][j], 2) for j in range(3)]):
-            s,w = x
-#        for s, w, ap in product([combinations(mutable_positions[j][j], 2) for j in range(3)]):
-            yield s,w,ap
-
-        for x, ap in reduce(product,[combinations(mutable_positions[2-j][j], 2) for j in range(3)]):
-            s,w = x
-#        for s, w, ap in product([combinations(mutable_positions[2-j][j], 2) for j in range(3)]):
-            yield s,w,ap
+            for x, ap in reduce(product,[combinations(mutable_positions[2-j][j], 2) for j in range(3)]):
+                s,w = x
+                yield s,w,ap
 
 
 
@@ -208,7 +204,7 @@ class FilledSudoku(Sudoku):
                     column = state[:,j]
                     conflicts += line[line == value].size + column[column == value].size - 2
         # on cherche à minimiser les conflits (au plus 81 * 4 = 324)
-        return 324 - conflicts
+        return -1*conflicts
 
 class NormalizedSudoku(Problem):
     """

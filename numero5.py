@@ -13,13 +13,13 @@ import sys
 
 from aima.search import Node, depth_first_graph_search, hill_climbing, greedy_best_first_graph_search
 
-from sudoku import Sudoku, FilledSudoku, NormalizedSudoku
+from sudoku import Sudoku, FilledSudoku, NormalizedSudoku, RandomizedSudoku, SortedSudoku
 from heuristics import most_constrained_cell
 from utils import load_examples, compact
 
 
 examples = load_examples(sys.argv[1])
-results = csv.DictWriter(sys.stdout, fieldnames=('initial', 'algorithm', 'heuristic', 'bound', 'final', 'explored', 'time'))
+results = csv.DictWriter(sys.stdout, fieldnames=('initial', 'algorithm', 'heuristic', 'bound', 'final', 'score','explored', 'time'))
 
 results.writeheader()
 
@@ -40,22 +40,41 @@ def bench(algorithm, problem, *argv, **kwargs):
         'heuristic': kwargs['f'].__name__ if 'f' in kwargs else '',
         'bound': kwargs['bound'] if 'bound' in kwargs else '',
         'final': compact(solution) if solution else '',
+        'score' : problem.value(solution) if solution else '',
         'explored': explored,
         'time': delta})
 
+i =0
 for example in examples:
+    i += 1
     sudoku = Sudoku(example)
     filled = FilledSudoku(example)
     normalized = NormalizedSudoku(example)
-
+    s = Sudoku(example)
+    r = RandomizedSudoku(example)
+    sorted_sudoku = SortedSudoku(example)
+    
+    
+ 
     # Hill-Climbing
     bench(hill_climbing, filled)
 
     # algorithmes bornés
-    for bound in [10, 50, 100, 250, 500, 750, 1000, 2000, 5000, 10000]:
+#    for b in [10000]:
+
+#    for bound in [10, 50, 100, 250, 500, 750, 1000, 2000, 5000, 10000]:
+
+        #profondeur d'abord    
+        #bench(depth_first_graph_search, s, bound=b)
+        #bench(depth_first_graph_search, r, bound=b)
+        #bench(depth_first_graph_search,sorted_sudoku, bound=b)
+        
         # première représentation
-        bench(greedy_best_first_graph_search, sudoku, f=most_constrained_cell, bound=bound)
+#        bench(greedy_best_first_graph_search, sudoku, f=most_constrained_cell, bound=bound)
+
+ #   if i == 40:
+  #      break
 
         # bonus
-        bench(greedy_best_first_graph_search, normalized, f=lambda node: normalized.value(node.state), bound=bound)
+ #       bench(greedy_best_first_graph_search, normalized, f=lambda node: normalized.value(node.state), bound=bound)
 
