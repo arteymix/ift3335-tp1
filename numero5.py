@@ -44,37 +44,22 @@ def bench(algorithm, problem, *argv, **kwargs):
         'explored': explored,
         'time': delta})
 
-i =0
 for example in examples:
-    i += 1
     sudoku = Sudoku(example)
+    randomized = RandomizedSudoku(example)
+    srt = SortedSudoku(example)
     filled = FilledSudoku(example)
     normalized = NormalizedSudoku(example)
-    s = Sudoku(example)
-    r = RandomizedSudoku(example)
-    sorted_sudoku = SortedSudoku(example)
-    
-    
- 
+
+    # profondeur d'abord
+    bench(depth_first_graph_search, sudoku, bound=10000)
+
     # Hill-Climbing
     bench(hill_climbing, filled)
 
-    # algorithmes bornés
-#    for b in [10000]:
+    # recherche heuristique
+    bench(greedy_best_first_graph_search, sudoku, f=most_constrained_cell, bound=100)
 
-#    for bound in [10, 50, 100, 250, 500, 750, 1000, 2000, 5000, 10000]:
-
-        #profondeur d'abord    
-        #bench(depth_first_graph_search, s, bound=b)
-        #bench(depth_first_graph_search, r, bound=b)
-        #bench(depth_first_graph_search,sorted_sudoku, bound=b)
-        
-        # première représentation
-#        bench(greedy_best_first_graph_search, sudoku, f=most_constrained_cell, bound=bound)
-
- #   if i == 40:
-  #      break
-
-        # bonus
- #       bench(greedy_best_first_graph_search, normalized, f=lambda node: normalized.value(node.state), bound=bound)
+    # bonus
+    bench(greedy_best_first_graph_search, normalized, f=lambda node: normalized.value(node.state), bound=10000)
 
