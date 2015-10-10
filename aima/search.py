@@ -210,7 +210,7 @@ def best_first_graph_search(problem, f, bound):
     f = memoize(f, 'f')
     node = Node(problem.initial)
     if problem.goal_test(node.state):
-        return node
+        return node, 1
     frontier = PriorityQueue(min, f)
     frontier.append(node)
     explored = set()
