@@ -122,7 +122,9 @@ class FilledSudoku(Sudoku):
         mutable_positions = [[None for i in range(3)] for j in range(3)]
         for i, j in product(range(3), range(3)):
             mutable_positions[i][j] = set(product(range(3*i, 3*i+3), range(3*j, 3*j+3))) - set(self.initial_positions)
-
+            for swap in combinations(mutable_positions[i][j], 2):
+                    yield [swap]
+                    
         for i in range(3):
 
             for x, ap in reduce(product,[combinations(mutable_positions[i][j], 2) for j in range(3)]):
